@@ -1,4 +1,8 @@
-const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+declare const Buffer: {
+  from(input: ArrayBuffer): Uint8Array;
+};
+
+const MAX_IMAGE_BYTES = 16 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = 9000;
 
 function setCors(res: any): void {
@@ -24,6 +28,11 @@ function parseTarget(raw: unknown): URL | null {
   } catch {
     return null;
   }
+}
+
+function normalizeImageContentType(contentType: string): string {
+  const mediaType = contentType.split(";")[0]?.trim().toLowerCase() || "application/octet-stream";
+  return mediaType === "image/jpg" ? "image/jpeg" : mediaType;
 }
 
 export default async function handler(req: any, res: any) {
@@ -63,7 +72,7 @@ export default async function handler(req: any, res: any) {
       return;
     }
 
-    const contentType = upstream.headers.get("content-type") || "application/octet-stream";
+    const contentType = normalizeImageContentType(upstream.headers.get("content-type") || "application/octet-stream");
     if (!contentType.startsWith("image/")) {
       res.status(415).json({ error: `Unsupported content-type: ${contentType}` });
       return;
@@ -75,15 +84,16 @@ export default async function handler(req: any, res: any) {
       return;
     }
 
-    const bytes = new Uint8Array(await upstream.arrayBuffer());
+    const bytes = Buffer.from(await upstream.arrayBuffer());
     if (bytes.byteLength > MAX_IMAGE_BYTES) {
       res.status(413).json({ error: "Image too large" });
       return;
     }
 
     res.setHeader("Content-Type", contentType);
+    res.setHeader("Content-Length", String(bytes.byteLength));
     res.setHeader("Cache-Control", "public, max-age=86400, s-maxage=604800, stale-while-revalidate=604800");
-    res.status(200).send(bytes);
+    res.status(200).end(bytes);
   } catch (error) {
     const message = error instanceof Error && error.name === "AbortError"
       ? "Upstream request timed out"
