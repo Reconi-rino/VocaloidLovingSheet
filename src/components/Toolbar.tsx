@@ -7,6 +7,7 @@ import {
   Copy,
   Trash2,
   Globe,
+  Monitor,
 } from "lucide-react";
 import ThemeSwitcher from "./ThemeSwitcher";
 import type { ThemeName, DisplayMode } from "./ThemeSwitcher";
@@ -123,6 +124,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
         {[
           { icon: Save, label: "保存", onClick: onSave },
           { icon: Image, label: "导出PNG", onClick: onExportPNG },
+          { icon: Monitor, label: "预览截图", onClick: () => { window.location.hash = "#preview"; } },
           { icon: Download, label: "导出JSON", onClick: onExportJSON },
           { icon: Upload, label: "导入JSON", onClick: onImportJSON },
           { icon: Copy, label: "复制分享文本", onClick: onCopyShareText },

@@ -15,6 +15,10 @@ import {
   loadMode,
   saveProxy,
   loadProxy,
+  saveTitle,
+  loadTitle,
+  saveAuthor,
+  loadAuthor,
   clearAll,
 } from "./services/storage";
 import { setProxyEnabled } from "./services/adapters/vocadbAdapter";
@@ -29,6 +33,7 @@ import Toolbar from "./components/Toolbar";
 import PreferenceGrid from "./components/PreferenceGrid";
 import ExportGrid from "./components/ExportGrid";
 import EntryEditorModal from "./components/EntryEditorModal";
+import PreviewPage from "./components/PreviewPage";
 import type { ThemeName, DisplayMode } from "./components/ThemeSwitcher";
 
 /* ---------- helpers ---------- */
@@ -102,6 +107,12 @@ function App() {
 
       const savedCustom = loadCustomEntries();
       if (savedCustom.length > 0) setCustomEntries(savedCustom);
+
+      const savedTitle = loadTitle();
+      if (savedTitle) setTitle(savedTitle);
+
+      const savedAuthor = loadAuthor();
+      if (savedAuthor) setAuthor(savedAuthor);
     } catch (err) {
       console.error("Failed to load saved data:", err);
     }
@@ -154,6 +165,16 @@ function App() {
       console.error("Failed to save proxy:", err);
     }
   }, [loaded, proxy]);
+
+  useEffect(() => {
+    if (!loaded) return;
+    saveTitle(title);
+  }, [loaded, title]);
+
+  useEffect(() => {
+    if (!loaded) return;
+    saveAuthor(author);
+  }, [loaded, author]);
 
   /* ============ cell interactions ============ */
   const handleCellClick = useCallback((categoryId: string) => {
@@ -297,6 +318,18 @@ function App() {
 
   /* ============ editing cell data ============ */
   const editingCell = editingCellId ? cells[editingCellId] : undefined;
+
+  /* ============ hash routing ============ */
+  const [hash, setHash] = useState(window.location.hash);
+  useEffect(() => {
+    const onHashChange = () => setHash(window.location.hash);
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
+
+  if (hash === "#preview") {
+    return <PreviewPage />;
+  }
 
   /* ============ render ============ */
   return (
