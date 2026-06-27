@@ -14,6 +14,9 @@ export async function exportToPNG(
     backgroundColor: getComputedStyle(document.documentElement)
       .getPropertyValue("--page-bg")
       .trim() || "#ffffff",
+    onImageErrorHandler: () => {
+      // Silently skip images that fail to load (e.g. CORS-blocked)
+    },
   });
 
   const link = document.createElement("a");

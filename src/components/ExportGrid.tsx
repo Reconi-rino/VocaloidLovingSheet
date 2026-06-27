@@ -101,7 +101,6 @@ const ExportGrid = React.forwardRef<HTMLDivElement, ExportGridProps>(
                     <img
                       src={displayUrl}
                       alt=""
-                      crossOrigin="anonymous"
                       style={{
                         width: "100%",
                         height: "100%",
