@@ -1,3 +1,5 @@
+import { Buffer } from "node:buffer";
+
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = 9000;
 
