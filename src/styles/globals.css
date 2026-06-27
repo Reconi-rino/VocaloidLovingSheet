@@ -1,0 +1,117 @@
+@import "tailwindcss";
+@import "./themes.css";
+
+/* ---- Box sizing ---- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* ---- Body reset ---- */
+body {
+  margin: 0;
+  font-family:
+    "Noto Sans SC", "PingFang SC", "Microsoft YaHei",
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  background-color: var(--page-bg, #f9fafb);
+  color: var(--page-text, #111827);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ---- Smooth scrolling ---- */
+html {
+  scroll-behavior: smooth;
+}
+
+/* ---- Focus visible styles ---- */
+:focus-visible {
+  outline: 2px solid var(--accent, #3b82f6);
+  outline-offset: 2px;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ---- Scrollbar styling (dark theme) ---- */
+[data-theme="dark"] ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-track {
+  background: #181825;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: #45475a;
+  border-radius: 4px;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: #585b70;
+}
+
+/* ---- Text overflow utilities ---- */
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.text-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.text-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ---- Mobile-friendly touch targets ---- */
+button,
+[role="button"],
+input[type="checkbox"],
+input[type="radio"],
+select,
+a {
+  min-height: 36px;
+  min-width: 36px;
+}
+
+input[type="text"],
+input[type="search"],
+input[type="url"],
+input[type="number"],
+textarea {
+  min-height: 36px;
+}
+
+/* ---- Theme-aware link colors ---- */
+a {
+  color: var(--accent, #39c5bb);
+}
+
+a:hover {
+  color: var(--accent-hover, #2da89f);
+}
+
+/* ---- Select / option styling ---- */
+select {
+  background: var(--input-bg, #fff);
+  color: var(--page-text, #111);
+  border-color: var(--input-border, #d1d5db);
+}
+
+select option {
+  background: var(--input-bg, #fff);
+  color: var(--page-text, #111);
+}

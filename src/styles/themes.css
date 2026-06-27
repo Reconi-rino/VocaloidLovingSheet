@@ -1,0 +1,261 @@
+/* ============================================================
+   Vocaloid Character Themes
+   Each theme uses the character's signature color + white text
+   ============================================================ */
+
+/* Theme 1: miku (初音ミク) — Teal #39c5bb — DEFAULT */
+[data-theme="miku"] {
+  --page-bg: #0a2e2b;
+  --page-text: #ffffff;
+
+  --cell-bg: #0f3d39;
+  --cell-border: #39c5bb;
+  --cell-text: #ffffff;
+  --cell-hover: #14504b;
+  --cell-radius: 8px;
+
+  --cell-label-bg: #39c5bb;
+  --cell-label-text: #ffffff;
+
+  --toolbar-bg: #0f3d39;
+  --toolbar-text: #ffffff;
+  --toolbar-border: #39c5bb;
+
+  --modal-bg: #0f3d39;
+  --modal-overlay: rgba(0, 0, 0, 0.7);
+
+  --accent: #39c5bb;
+  --accent-hover: #2da89f;
+  --accent-text: #ffffff;
+
+  --input-bg: #0a2e2b;
+  --input-border: #39c5bb;
+
+  --btn-bg: #39c5bb;
+  --btn-text: #ffffff;
+  --btn-hover: #2da89f;
+  --btn-border: #39c5bb;
+
+  --result-bg: #0a2e2b;
+  --result-hover: #14504b;
+}
+
+/* Theme 2: tianyi (洛天依) — Sky Blue #66ccff */
+[data-theme="tianyi"] {
+  --page-bg: #0b1e33;
+  --page-text: #ffffff;
+
+  --cell-bg: #112d4a;
+  --cell-border: #66ccff;
+  --cell-text: #ffffff;
+  --cell-hover: #163d62;
+  --cell-radius: 8px;
+
+  --cell-label-bg: #66ccff;
+  --cell-label-text: #ffffff;
+
+  --toolbar-bg: #112d4a;
+  --toolbar-text: #ffffff;
+  --toolbar-border: #66ccff;
+
+  --modal-bg: #112d4a;
+  --modal-overlay: rgba(0, 0, 0, 0.7);
+
+  --accent: #66ccff;
+  --accent-hover: #4db8ec;
+  --accent-text: #ffffff;
+
+  --input-bg: #0b1e33;
+  --input-border: #66ccff;
+
+  --btn-bg: #66ccff;
+  --btn-text: #ffffff;
+  --btn-hover: #4db8ec;
+  --btn-border: #66ccff;
+
+  --result-bg: #0b1e33;
+  --result-hover: #163d62;
+}
+
+/* Theme 3: kagamine (鏡音リン・レン) — Soft Gold #c9a638 */
+[data-theme="kagamine"] {
+  --page-bg: #1e1b0e;
+  --page-text: #f5f0e0;
+
+  --cell-bg: #2b2614;
+  --cell-border: #c9a638;
+  --cell-text: #f5f0e0;
+  --cell-hover: #38311a;
+  --cell-radius: 8px;
+
+  --cell-label-bg: #c9a638;
+  --cell-label-text: #1a1500;
+
+  --toolbar-bg: #2b2614;
+  --toolbar-text: #f5f0e0;
+  --toolbar-border: #c9a638;
+
+  --modal-bg: #2b2614;
+  --modal-overlay: rgba(0, 0, 0, 0.7);
+
+  --accent: #c9a638;
+  --accent-hover: #b89530;
+  --accent-text: #1a1500;
+
+  --input-bg: #1e1b0e;
+  --input-border: #c9a638;
+
+  --btn-bg: #c9a638;
+  --btn-text: #1a1500;
+  --btn-hover: #b89530;
+  --btn-border: #c9a638;
+
+  --result-bg: #1e1b0e;
+  --result-hover: #38311a;
+}
+
+/* Theme 4: luka (巡音ルカ) — Pink #ff6b9d */
+[data-theme="luka"] {
+  --page-bg: #2a0f1a;
+  --page-text: #ffffff;
+
+  --cell-bg: #3d1526;
+  --cell-border: #ff6b9d;
+  --cell-text: #ffffff;
+  --cell-hover: #4d1b30;
+  --cell-radius: 8px;
+
+  --cell-label-bg: #ff6b9d;
+  --cell-label-text: #ffffff;
+
+  --toolbar-bg: #3d1526;
+  --toolbar-text: #ffffff;
+  --toolbar-border: #ff6b9d;
+
+  --modal-bg: #3d1526;
+  --modal-overlay: rgba(0, 0, 0, 0.7);
+
+  --accent: #ff6b9d;
+  --accent-hover: #e6557f;
+  --accent-text: #ffffff;
+
+  --input-bg: #2a0f1a;
+  --input-border: #ff6b9d;
+
+  --btn-bg: #ff6b9d;
+  --btn-text: #ffffff;
+  --btn-hover: #e6557f;
+  --btn-border: #ff6b9d;
+
+  --result-bg: #2a0f1a;
+  --result-hover: #4d1b30;
+}
+
+/* Theme 5: kaito (KAITO) — Royal Blue #4169e1 */
+[data-theme="kaito"] {
+  --page-bg: #0d1533;
+  --page-text: #ffffff;
+
+  --cell-bg: #14204a;
+  --cell-border: #4169e1;
+  --cell-text: #ffffff;
+  --cell-hover: #1a2d62;
+  --cell-radius: 8px;
+
+  --cell-label-bg: #4169e1;
+  --cell-label-text: #ffffff;
+
+  --toolbar-bg: #14204a;
+  --toolbar-text: #ffffff;
+  --toolbar-border: #4169e1;
+
+  --modal-bg: #14204a;
+  --modal-overlay: rgba(0, 0, 0, 0.7);
+
+  --accent: #4169e1;
+  --accent-hover: #3454b8;
+  --accent-text: #ffffff;
+
+  --input-bg: #0d1533;
+  --input-border: #4169e1;
+
+  --btn-bg: #4169e1;
+  --btn-text: #ffffff;
+  --btn-hover: #3454b8;
+  --btn-border: #4169e1;
+
+  --result-bg: #0d1533;
+  --result-hover: #1a2d62;
+}
+
+/* Theme 6: meiko (MEIKO) — Crimson Red #e63946 */
+[data-theme="meiko"] {
+  --page-bg: #2a0a0d;
+  --page-text: #ffffff;
+
+  --cell-bg: #3d1015;
+  --cell-border: #e63946;
+  --cell-text: #ffffff;
+  --cell-hover: #4d151b;
+  --cell-radius: 8px;
+
+  --cell-label-bg: #e63946;
+  --cell-label-text: #ffffff;
+
+  --toolbar-bg: #3d1015;
+  --toolbar-text: #ffffff;
+  --toolbar-border: #e63946;
+
+  --modal-bg: #3d1015;
+  --modal-overlay: rgba(0, 0, 0, 0.7);
+
+  --accent: #e63946;
+  --accent-hover: #c5303c;
+  --accent-text: #ffffff;
+
+  --input-bg: #2a0a0d;
+  --input-border: #e63946;
+
+  --btn-bg: #e63946;
+  --btn-text: #ffffff;
+  --btn-hover: #c5303c;
+  --btn-border: #e63946;
+
+  --result-bg: #2a0a0d;
+  --result-hover: #4d151b;
+}
+
+/* ============================================================
+   Light Mode Override
+   data-mode="light" on the same element as data-theme
+   Keeps each character's accent color, swaps surfaces to light
+   ============================================================ */
+
+[data-mode="light"] {
+  --page-bg: #f8f9fa;
+  --page-text: #1a1a2e;
+
+  --cell-bg: #ffffff;
+  --cell-text: #1a1a2e;
+  --cell-hover: #f0f0f5;
+
+  --cell-label-text: #ffffff;
+
+  --toolbar-bg: #ffffff;
+  --toolbar-text: #1a1a2e;
+
+  --modal-bg: #ffffff;
+  --modal-overlay: rgba(0, 0, 0, 0.3);
+
+  --input-bg: #ffffff;
+  --input-border: #d0d0d8;
+
+  --result-bg: #f0f1f3;
+  --result-hover: #e4e6ea;
+}
+
+/* In light mode, accent text should be dark for contrast on bright buttons */
+[data-mode="light"] {
+  --accent-text: #1a1a2e;
+  --btn-text: #1a1a2e;
+}
