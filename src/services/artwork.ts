@@ -10,28 +10,6 @@ import { proxiedFetch } from "./adapters/vocadbAdapter";
 
 const ARTWORK_CACHE_KEY = "vocaloid-artwork-cache";
 
-const EXTERNAL_IMAGE_DOMAINS = [
-  "static.vocadb.net",
-  "img.youtube.com",
-  "i1.ytimg.com",
-  "i.ytimg.com",
-];
-
-/**
- * Wrap external image URLs through wsrv.nl image proxy.
- * This adds CORS headers so images work with html-to-image export,
- * and also works directly in <img> tags.
- */
-export function proxyImageUrl(url: string): string {
-  if (!url) return url;
-  if (url.startsWith("data:")) return url;
-  const needsProxy = EXTERNAL_IMAGE_DOMAINS.some((d) => url.includes(d));
-  if (needsProxy) {
-    return `https://wsrv.nl/?url=${encodeURIComponent(url)}`;
-  }
-  return url;
-}
-
 // ── Cache ──────────────────────────────────────────────
 
 const cache = new Map<string, ArtworkCandidate>();
@@ -138,7 +116,7 @@ async function fetchVocaDBArtwork(entry: Entry): Promise<ArtworkCandidate[]> {
           id: `vocadb-${entry.type}-${item.id}`,
           provider: "vocadb",
           kind,
-          url: proxyImageUrl(rawUrl),
+          url: rawUrl,
           sourceUrl: `https://vocadb.net/${entry.type === "song" ? "S" : entry.type === "album" ? "Al" : "Ar"}/${item.id}`,
           title: item.defaultName || item.name,
           confidence: 0.9,
@@ -159,7 +137,7 @@ async function fetchVocaDBArtwork(entry: Entry): Promise<ArtworkCandidate[]> {
                 id: `youtube-${videoId}`,
                 provider: "youtube",
                 kind: "video-thumbnail",
-                url: proxyImageUrl(rawUrl),
+                url: rawUrl,
                 sourceUrl: pv.url,
                 title: `YouTube: ${pv.name || videoId}`,
                 confidence: 0.7,
@@ -258,8 +236,7 @@ export async function tryCacheRemoteImage(
   if (candidate.provider === "upload" || candidate.provider === "placeholder") return candidate;
 
   try {
-    const fetchUrl = proxyImageUrl(candidate.url);
-    const res = await fetch(fetchUrl, { mode: "cors" });
+    const res = await fetch(candidate.url, { mode: "cors" });
     if (!res.ok) return candidate;
     const blob = await res.blob();
     const dataUrl = await new Promise<string>((resolve, reject) => {
@@ -329,7 +306,7 @@ export async function resolveArtwork(
       id: `existing-${entry.id}`,
       provider: "manual-url",
       kind,
-      url: proxyImageUrl(existingUrl),
+      url: existingUrl,
       confidence: 0.8,
       corsSafe: true,
       exportSafe: true,

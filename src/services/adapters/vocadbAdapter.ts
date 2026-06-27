@@ -1,5 +1,4 @@
 import type { Entry, SearchAdapter } from "../../types";
-import { proxyImageUrl } from "../artwork";
 
 const VOCADB_BASE = "https://vocadb.net/api";
 const PROXY_PREFIXES = [
@@ -100,11 +99,6 @@ interface VocaDBAlbum {
   createDate?: string;
 }
 
-function proxyUrlOrUndefined(url: string | undefined): string | undefined {
-  if (!url) return undefined;
-  return proxyImageUrl(url);
-}
-
 function songToEntry(s: VocaDBSong): Entry {
   const singers: string[] = [];
   const producers: string[] = [];
@@ -127,7 +121,7 @@ function songToEntry(s: VocaDBSong): Entry {
     producers,
     singers,
     year: s.publishDate?.slice(0, 4),
-    coverUrl: proxyUrlOrUndefined(s.mainPicture?.urlOriginal || s.mainPicture?.urlSmallThumb),
+    coverUrl: s.mainPicture?.urlOriginal || s.mainPicture?.urlSmallThumb,
     sourceLinks: [
       { label: "VocaDB", url: `https://vocadb.net/S/${s.id}` },
     ],
@@ -147,7 +141,7 @@ function artistToEntry(a: VocaDBArtist): Entry {
     aliases: a.aliases || [],
     producers: [],
     singers: [],
-    avatarUrl: proxyUrlOrUndefined(a.mainPicture?.urlOriginal || a.mainPicture?.urlSmallThumb),
+    avatarUrl: a.mainPicture?.urlOriginal || a.mainPicture?.urlSmallThumb,
     sourceLinks: [
       { label: "VocaDB", url: `https://vocadb.net/Ar/${a.id}` },
     ],
@@ -167,7 +161,7 @@ function albumToEntry(a: VocaDBAlbum): Entry {
     producers: a.artistString ? a.artistString.split(/,\s*/) : [],
     singers: [],
     year: a.releaseDate?.year,
-    coverUrl: proxyUrlOrUndefined(a.mainPicture?.urlOriginal || a.mainPicture?.urlSmallThumb),
+    coverUrl: a.mainPicture?.urlOriginal || a.mainPicture?.urlSmallThumb,
     sourceLinks: [
       { label: "VocaDB", url: `https://vocadb.net/Al/${a.id}` },
     ],
