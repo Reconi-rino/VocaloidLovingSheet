@@ -10,6 +10,28 @@ import { proxiedFetch } from "./adapters/vocadbAdapter";
 
 const ARTWORK_CACHE_KEY = "vocaloid-artwork-cache";
 
+const EXTERNAL_IMAGE_DOMAINS = [
+  "static.vocadb.net",
+  "img.youtube.com",
+  "i1.ytimg.com",
+  "i.ytimg.com",
+];
+
+/**
+ * Wrap external image URLs through wsrv.nl image proxy.
+ * This adds CORS headers so images work with html-to-image export,
+ * and also works directly in <img> tags.
+ */
+export function proxyImageUrl(url: string): string {
+  if (!url) return url;
+  if (url.startsWith("data:")) return url;
+  const needsProxy = EXTERNAL_IMAGE_DOMAINS.some((d) => url.includes(d));
+  if (needsProxy) {
+    return `https://wsrv.nl/?url=${encodeURIComponent(url)}`;
+  }
+  return url;
+}
+
 // ── Cache ──────────────────────────────────────────────
 
 const cache = new Map<string, ArtworkCandidate>();
@@ -111,16 +133,17 @@ async function fetchVocaDBArtwork(entry: Entry): Promise<ArtworkCandidate[]> {
 
     for (const item of items) {
       if (item.mainPicture?.urlOriginal || item.mainPicture?.urlSmallThumb) {
+        const rawUrl = item.mainPicture.urlOriginal || item.mainPicture.urlSmallThumb;
         candidates.push({
           id: `vocadb-${entry.type}-${item.id}`,
           provider: "vocadb",
           kind,
-          url: item.mainPicture.urlOriginal || item.mainPicture.urlSmallThumb,
+          url: proxyImageUrl(rawUrl),
           sourceUrl: `https://vocadb.net/${entry.type === "song" ? "S" : entry.type === "album" ? "Al" : "Ar"}/${item.id}`,
           title: item.defaultName || item.name,
           confidence: 0.9,
-          corsSafe: false,
-          exportSafe: false,
+          corsSafe: true,
+          exportSafe: true,
           createdAt: new Date().toISOString(),
         });
       }
@@ -131,16 +154,17 @@ async function fetchVocaDBArtwork(entry: Entry): Promise<ArtworkCandidate[]> {
           if (pv.service === "Youtube" && pv.url) {
             const videoId = extractYouTubeId(pv.url);
             if (videoId) {
+              const rawUrl = `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
               candidates.push({
                 id: `youtube-${videoId}`,
                 provider: "youtube",
                 kind: "video-thumbnail",
-                url: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+                url: proxyImageUrl(rawUrl),
                 sourceUrl: pv.url,
                 title: `YouTube: ${pv.name || videoId}`,
                 confidence: 0.7,
-                corsSafe: false,
-                exportSafe: false,
+                corsSafe: true,
+                exportSafe: true,
                 createdAt: new Date().toISOString(),
               });
             }
@@ -234,7 +258,8 @@ export async function tryCacheRemoteImage(
   if (candidate.provider === "upload" || candidate.provider === "placeholder") return candidate;
 
   try {
-    const res = await fetch(candidate.url, { mode: "cors" });
+    const fetchUrl = proxyImageUrl(candidate.url);
+    const res = await fetch(fetchUrl, { mode: "cors" });
     if (!res.ok) return candidate;
     const blob = await res.blob();
     const dataUrl = await new Promise<string>((resolve, reject) => {
@@ -304,10 +329,10 @@ export async function resolveArtwork(
       id: `existing-${entry.id}`,
       provider: "manual-url",
       kind,
-      url: existingUrl,
+      url: proxyImageUrl(existingUrl),
       confidence: 0.8,
-      corsSafe: false,
-      exportSafe: false,
+      corsSafe: true,
+      exportSafe: true,
       createdAt: new Date().toISOString(),
     });
   }

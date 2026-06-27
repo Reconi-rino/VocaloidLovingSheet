@@ -1,25 +1,72 @@
 import { toPng } from "html-to-image";
+import { proxyImageUrl } from "./artwork";
+
+/**
+ * Fetch an image URL through a CORS proxy and return as a data-URL.
+ * Falls back to the original URL if the proxy fails.
+ */
+async function fetchAsDataUrl(url: string): Promise<string> {
+  const proxied = proxyImageUrl(url);
+  try {
+    const res = await fetch(proxied, { mode: "cors", cache: "force-cache" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const blob = await res.blob();
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return url;
+  }
+}
 
 /**
  * Export an HTML element as a PNG image and trigger download.
  * Renders at 2x scale for high-DPI clarity.
+ *
+ * Pre-caches all remote images through a CORS proxy so that
+ * html-to-image can embed them without cross-origin errors.
  */
 export async function exportToPNG(
   element: HTMLElement,
   filename = "vocaloid-loving-sheet.png",
 ): Promise<void> {
-  const dataUrl = await toPng(element, {
-    pixelRatio: 2,
-    cacheBust: true,
-    backgroundColor: getComputedStyle(document.documentElement)
-      .getPropertyValue("--page-bg")
-      .trim() || "#ffffff",
-  });
+  // Pre-cache all remote images as data-URLs
+  const imgs = Array.from(element.querySelectorAll("img"));
+  const originals: { img: HTMLImageElement; src: string }[] = [];
 
-  const link = document.createElement("a");
-  link.download = filename;
-  link.href = dataUrl;
-  link.click();
+  await Promise.all(
+    imgs.map(async (img) => {
+      const src = img.src;
+      if (!src || src.startsWith("data:")) return;
+      originals.push({ img, src });
+      try {
+        img.src = await fetchAsDataUrl(src);
+      } catch { /* keep original */ }
+    }),
+  );
+
+  try {
+    const dataUrl = await toPng(element, {
+      pixelRatio: 2,
+      cacheBust: true,
+      backgroundColor: getComputedStyle(document.documentElement)
+        .getPropertyValue("--page-bg")
+        .trim() || "#ffffff",
+    });
+
+    const link = document.createElement("a");
+    link.download = filename;
+    link.href = dataUrl;
+    link.click();
+  } finally {
+    // Restore original URLs
+    for (const { img, src } of originals) {
+      img.src = src;
+    }
+  }
 }
 
 /**
