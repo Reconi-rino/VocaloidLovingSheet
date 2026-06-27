@@ -105,6 +105,7 @@ const ExportGrid = React.forwardRef<HTMLDivElement, ExportGridProps>(
                         width: "100%",
                         height: "100%",
                         objectFit: "cover",
+                        objectPosition: entry?.type === "singer" ? "top" : "center",
                         display: "block",
                       }}
                       onError={(e) => {

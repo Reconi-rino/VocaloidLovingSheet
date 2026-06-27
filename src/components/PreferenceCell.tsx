@@ -120,7 +120,7 @@ const PreferenceCell: React.FC<PreferenceCellProps> = ({
                   src={displayUrl}
                   alt={entry.title}
                   className="h-full w-full"
-                  style={{ objectFit: fit }}
+                  style={{ objectFit: fit, objectPosition: entry?.type === "singer" ? "top" : "center" }}
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
                     if (placeholderUrl && target.src !== placeholderUrl) {
