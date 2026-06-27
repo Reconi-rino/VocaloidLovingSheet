@@ -1,6 +1,7 @@
 import React from "react";
 import type { Entry, EntryType } from "../types";
 import { Search, Music, User, Mic, Disc3 } from "lucide-react";
+import { getEntryImageUrl } from "../services/artwork";
 
 interface SearchPanelProps {
   query: string;
@@ -76,7 +77,7 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
   return (
     <div className="max-h-64 space-y-1 overflow-y-auto">
       {filtered.map((entry) => {
-        const imageUrl = entry.coverUrl || entry.avatarUrl || entry.portraitUrl;
+        const imageUrl = getEntryImageUrl(entry);
         return (
           <button
             key={entry.id}

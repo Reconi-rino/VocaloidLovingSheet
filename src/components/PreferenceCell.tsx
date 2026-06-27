@@ -1,6 +1,6 @@
 import React from "react";
 import type { PreferenceCellData } from "../types";
-import { getArtworkUrl } from "../services/artwork";
+import { getArtworkUrl, getCellImageUrl } from "../services/artwork";
 import { createPlaceholderArtwork } from "../services/artwork";
 import { X, Pencil, Copy } from "lucide-react";
 
@@ -9,26 +9,6 @@ interface PreferenceCellProps {
   onClick: () => void;
   onClear?: () => void;
   onCopy?: () => void;
-}
-
-function getImageUrl(data: PreferenceCellData): string | undefined {
-  const { entry, cellArtwork } = data;
-
-  if (cellArtwork) {
-    const url = getArtworkUrl(cellArtwork);
-    if (url) return url;
-  }
-
-  if (entry?.artwork?.selected) {
-    const url = getArtworkUrl(entry.artwork.selected);
-    if (url) return url;
-  }
-
-  if (entry) {
-    return entry.coverUrl || entry.avatarUrl || entry.portraitUrl;
-  }
-
-  return undefined;
 }
 
 const PreferenceCell: React.FC<PreferenceCellProps> = ({
@@ -42,7 +22,7 @@ const PreferenceCell: React.FC<PreferenceCellProps> = ({
     imageFit === "cover" || imageFit === "contain" ? imageFit : "cover";
   const hasEntry = !!entry;
 
-  const imageUrl = getImageUrl(data);
+  const imageUrl = getCellImageUrl(data);
   const [imgError, setImgError] = React.useState(false);
 
   // Reset error state when image URL changes

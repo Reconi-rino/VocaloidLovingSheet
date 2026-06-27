@@ -1,4 +1,10 @@
-import type { Entry, EntryType, ArtworkKind, ArtworkCandidate } from "../types";
+import type {
+  Entry,
+  EntryType,
+  ArtworkKind,
+  ArtworkCandidate,
+  PreferenceCellData,
+} from "../types";
 
 // ── Placeholder ────────────────────────────────────────
 
@@ -53,4 +59,37 @@ export function createPlaceholderArtwork(
 export function getArtworkUrl(candidate?: ArtworkCandidate): string | undefined {
   if (!candidate) return undefined;
   return candidate.dataUrl || candidate.url;
+}
+
+function firstUrl(...urls: Array<string | undefined>): string | undefined {
+  return urls.find((url) => typeof url === "string" && url.trim().length > 0);
+}
+
+export function getEntryImageUrl(entry?: Entry): string | undefined {
+  if (!entry) return undefined;
+
+  const artworkUrl = getArtworkUrl(entry.artwork?.selected);
+  if (artworkUrl) return artworkUrl;
+
+  switch (entry.type) {
+    case "producer":
+      return firstUrl(entry.avatarUrl, entry.coverUrl, entry.portraitUrl);
+    case "singer":
+      return firstUrl(entry.portraitUrl, entry.avatarUrl, entry.coverUrl);
+    case "album":
+    case "song":
+      return firstUrl(entry.coverUrl, entry.avatarUrl, entry.portraitUrl);
+    case "custom":
+      return firstUrl(entry.coverUrl, entry.portraitUrl, entry.avatarUrl);
+    default:
+      return firstUrl(entry.coverUrl, entry.avatarUrl, entry.portraitUrl);
+  }
+}
+
+export function getCellImageUrl(
+  cell: Pick<PreferenceCellData, "cellArtwork" | "entry">,
+): string | undefined {
+  const cellArtworkUrl = getArtworkUrl(cell.cellArtwork);
+  if (cellArtworkUrl) return cellArtworkUrl;
+  return getEntryImageUrl(cell.entry);
 }

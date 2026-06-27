@@ -99,6 +99,20 @@ interface VocaDBAlbum {
   createDate?: string;
 }
 
+function getPictureUrls(picture?: {
+  urlOriginal?: string;
+  urlSmallThumb?: string;
+  urlThumb?: string;
+}): {
+  primary?: string;
+  thumb?: string;
+} {
+  return {
+    primary: picture?.urlOriginal || picture?.urlThumb || picture?.urlSmallThumb,
+    thumb: picture?.urlSmallThumb || picture?.urlThumb || picture?.urlOriginal,
+  };
+}
+
 function songToEntry(s: VocaDBSong): Entry {
   const singers: string[] = [];
   const producers: string[] = [];
@@ -112,6 +126,8 @@ function songToEntry(s: VocaDBSong): Entry {
     }
   }
 
+  const picture = getPictureUrls(s.mainPicture);
+
   return {
     id: `vocadb-song-${s.id}`,
     type: "song",
@@ -121,7 +137,7 @@ function songToEntry(s: VocaDBSong): Entry {
     producers,
     singers,
     year: s.publishDate?.slice(0, 4),
-    coverUrl: s.mainPicture?.urlOriginal || s.mainPicture?.urlSmallThumb,
+    coverUrl: picture.primary,
     sourceLinks: [
       { label: "VocaDB", url: `https://vocadb.net/S/${s.id}` },
     ],
@@ -133,6 +149,8 @@ function songToEntry(s: VocaDBSong): Entry {
 
 function artistToEntry(a: VocaDBArtist): Entry {
   const isSinger = ["Vocaloid", "CeVIO", "SynthesizerV", "UTAU", "NEUTRINO", "VOICEVOX"].includes(a.artistType);
+  const picture = getPictureUrls(a.mainPicture);
+
   return {
     id: `vocadb-artist-${a.id}`,
     type: isSinger ? "singer" : "producer",
@@ -141,7 +159,8 @@ function artistToEntry(a: VocaDBArtist): Entry {
     aliases: a.aliases || [],
     producers: [],
     singers: [],
-    avatarUrl: a.mainPicture?.urlOriginal || a.mainPicture?.urlSmallThumb,
+    avatarUrl: isSinger ? picture.thumb : picture.primary,
+    portraitUrl: isSinger ? picture.primary : undefined,
     sourceLinks: [
       { label: "VocaDB", url: `https://vocadb.net/Ar/${a.id}` },
     ],
@@ -152,6 +171,8 @@ function artistToEntry(a: VocaDBArtist): Entry {
 }
 
 function albumToEntry(a: VocaDBAlbum): Entry {
+  const picture = getPictureUrls(a.mainPicture);
+
   return {
     id: `vocadb-album-${a.id}`,
     type: "album",
@@ -161,7 +182,7 @@ function albumToEntry(a: VocaDBAlbum): Entry {
     producers: a.artistString ? a.artistString.split(/,\s*/) : [],
     singers: [],
     year: a.releaseDate?.year,
-    coverUrl: a.mainPicture?.urlOriginal || a.mainPicture?.urlSmallThumb,
+    coverUrl: picture.primary,
     sourceLinks: [
       { label: "VocaDB", url: `https://vocadb.net/Al/${a.id}` },
     ],

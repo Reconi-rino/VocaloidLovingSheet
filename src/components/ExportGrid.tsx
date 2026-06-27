@@ -1,6 +1,6 @@
 import React from "react";
 import type { PreferenceCellData } from "../types";
-import { getArtworkUrl, createPlaceholderArtwork } from "../services/artwork";
+import { getArtworkUrl, createPlaceholderArtwork, getCellImageUrl } from "../services/artwork";
 
 interface ExportGridProps {
   title: string;
@@ -9,20 +9,6 @@ interface ExportGridProps {
 }
 
 const CELL_SIZE = 120;
-
-function getImageUrl(data: PreferenceCellData): string | undefined {
-  const { entry, cellArtwork } = data;
-  if (cellArtwork) {
-    const url = getArtworkUrl(cellArtwork);
-    if (url) return url;
-  }
-  if (entry?.artwork?.selected) {
-    const url = getArtworkUrl(entry.artwork.selected);
-    if (url) return url;
-  }
-  if (entry) return entry.coverUrl || entry.avatarUrl || entry.portraitUrl;
-  return undefined;
-}
 
 const ExportGrid = React.forwardRef<HTMLDivElement, ExportGridProps>(
   ({ title, author, cells }, ref) => {
@@ -61,7 +47,7 @@ const ExportGrid = React.forwardRef<HTMLDivElement, ExportGridProps>(
         >
           {cellEntries.map((cell) => {
             const { entry, categoryLabel } = cell;
-            const imageUrl = getImageUrl(cell);
+            const imageUrl = getCellImageUrl(cell);
             const placeholderUrl = entry
               ? getArtworkUrl(
                   createPlaceholderArtwork(

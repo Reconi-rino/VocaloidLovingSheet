@@ -1,5 +1,5 @@
 import type { Entry, PreferenceCellData } from "../types";
-import { getArtworkUrl } from "./artwork";
+import { getCellImageUrl } from "./artwork";
 
 type ExportTheme = "miku" | "tianyi" | "kagamine" | "luka" | "kaito" | "meiko" | string;
 type ExportMode = "dark" | "light" | string;
@@ -95,23 +95,6 @@ function getPalette(theme = "miku", mode = "dark"): Palette {
     placeholderA: DARK_SURFACES[theme] ?? DARK_SURFACES.miku,
     placeholderB: DARK_BACKGROUNDS[theme] ?? DARK_BACKGROUNDS.miku,
   };
-}
-
-function getEntryImageUrl(cell: PreferenceCellData): string | undefined {
-  if (cell.cellArtwork) {
-    const url = getArtworkUrl(cell.cellArtwork);
-    if (url) return url;
-  }
-
-  const entry = cell.entry;
-  if (!entry) return undefined;
-
-  if (entry.artwork?.selected) {
-    const url = getArtworkUrl(entry.artwork.selected);
-    if (url) return url;
-  }
-
-  return entry.coverUrl || entry.avatarUrl || entry.portraitUrl;
 }
 
 function getSubtitle(entry: Entry): string {
@@ -365,7 +348,7 @@ async function drawCell(
 
   const imageX = x;
   const imageY = y;
-  const image = await loadDrawableImage(getEntryImageUrl(cell));
+  const image = await loadDrawableImage(getCellImageUrl(cell));
   if (image) {
     drawImageCover(
       ctx,
