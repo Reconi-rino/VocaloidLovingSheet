@@ -1,6 +1,6 @@
 import React from "react";
 import type { PreferenceCellData } from "../types";
-import { getArtworkUrl, getCellImageUrl } from "../services/artwork";
+import { getArtworkUrl, getCellImageUrls } from "../services/artwork";
 import { createPlaceholderArtwork } from "../services/artwork";
 import { X, Pencil, Copy } from "lucide-react";
 
@@ -22,13 +22,16 @@ const PreferenceCell: React.FC<PreferenceCellProps> = ({
     imageFit === "cover" || imageFit === "contain" ? imageFit : "cover";
   const hasEntry = !!entry;
 
-  const imageUrl = getCellImageUrl(data);
+  const imageUrls = React.useMemo(() => getCellImageUrls(data), [data]);
+  const [imageIndex, setImageIndex] = React.useState(0);
+  const imageUrl = imageUrls[imageIndex];
   const [imgError, setImgError] = React.useState(false);
 
   // Reset error state when image URL changes
   React.useEffect(() => {
+    setImageIndex(0);
     setImgError(false);
-  }, [imageUrl]);
+  }, [imageUrls.join("\n")]);
 
   const placeholderUrl = React.useMemo(() => {
     if (!entry || imageUrl) return undefined;
@@ -102,6 +105,10 @@ const PreferenceCell: React.FC<PreferenceCellProps> = ({
                   className="h-full w-full"
                   style={{ objectFit: fit, objectPosition: entry?.type === "singer" ? "top" : "center" }}
                   onError={(e) => {
+                    if (imageIndex + 1 < imageUrls.length) {
+                      setImageIndex((idx) => idx + 1);
+                      return;
+                    }
                     const target = e.target as HTMLImageElement;
                     if (placeholderUrl && target.src !== placeholderUrl) {
                       target.src = placeholderUrl;

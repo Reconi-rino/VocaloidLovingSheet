@@ -1,6 +1,6 @@
 import React from "react";
 import type { PreferenceCellData } from "../types";
-import { getArtworkUrl, createPlaceholderArtwork, getCellImageUrl } from "../services/artwork";
+import { getArtworkUrl, createPlaceholderArtwork, getCellImageUrls } from "../services/artwork";
 
 interface ExportGridProps {
   title: string;
@@ -47,7 +47,8 @@ const ExportGrid = React.forwardRef<HTMLDivElement, ExportGridProps>(
         >
           {cellEntries.map((cell) => {
             const { entry, categoryLabel } = cell;
-            const imageUrl = getCellImageUrl(cell);
+            const imageUrls = getCellImageUrls(cell);
+            const imageUrl = imageUrls[0];
             const placeholderUrl = entry
               ? getArtworkUrl(
                   createPlaceholderArtwork(
@@ -96,7 +97,12 @@ const ExportGrid = React.forwardRef<HTMLDivElement, ExportGridProps>(
                       }}
                       onError={(e) => {
                         const t = e.target as HTMLImageElement;
-                        if (placeholderUrl && t.src !== placeholderUrl) {
+                        const nextIndex = Number(t.dataset.fallbackIndex || "0") + 1;
+                        const nextUrl = imageUrls[nextIndex];
+                        if (nextUrl) {
+                          t.dataset.fallbackIndex = String(nextIndex);
+                          t.src = nextUrl;
+                        } else if (placeholderUrl && t.src !== placeholderUrl) {
                           t.src = placeholderUrl;
                         } else {
                           t.style.display = "none";

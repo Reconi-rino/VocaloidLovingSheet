@@ -76,6 +76,7 @@ export interface Entry {
   coverUrl?: string;
   avatarUrl?: string;
   portraitUrl?: string;
+  imageFallbackUrls?: string[];
   artwork?: EntryArtwork;
   sourceLinks: SourceLink[];
   tags: string[];

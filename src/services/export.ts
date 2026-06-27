@@ -1,5 +1,5 @@
 import type { Entry, PreferenceCellData } from "../types";
-import { getCellImageUrl } from "./artwork";
+import { getCellImageUrls } from "./artwork";
 
 type ExportTheme = "miku" | "tianyi" | "kagamine" | "luka" | "kaito" | "meiko" | string;
 type ExportMode = "dark" | "light" | string;
@@ -214,6 +214,14 @@ async function loadDrawableImage(src: string | undefined): Promise<HTMLImageElem
   return canReadImage(img) ? img : null;
 }
 
+async function loadFirstDrawableImage(urls: string[]): Promise<HTMLImageElement | null> {
+  for (const url of urls) {
+    const image = await loadDrawableImage(url);
+    if (image) return image;
+  }
+  return null;
+}
+
 function drawImageCover(
   ctx: CanvasRenderingContext2D,
   img: HTMLImageElement,
@@ -348,7 +356,7 @@ async function drawCell(
 
   const imageX = x;
   const imageY = y;
-  const image = await loadDrawableImage(getCellImageUrl(cell));
+  const image = await loadFirstDrawableImage(getCellImageUrls(cell));
   if (image) {
     drawImageCover(
       ctx,

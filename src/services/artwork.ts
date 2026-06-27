@@ -65,31 +65,85 @@ function firstUrl(...urls: Array<string | undefined>): string | undefined {
   return urls.find((url) => typeof url === "string" && url.trim().length > 0);
 }
 
-export function getEntryImageUrl(entry?: Entry): string | undefined {
-  if (!entry) return undefined;
+function pushUrl(urls: string[], url: string | undefined): void {
+  const trimmed = url?.trim();
+  if (!trimmed || urls.includes(trimmed)) return;
+  urls.push(trimmed);
+}
 
-  const artworkUrl = getArtworkUrl(entry.artwork?.selected);
-  if (artworkUrl) return artworkUrl;
+function pushArtwork(urls: string[], candidate: ArtworkCandidate | undefined): void {
+  pushUrl(urls, getArtworkUrl(candidate));
+}
+
+function pushArtworkList(urls: string[], candidates: ArtworkCandidate[] | undefined): void {
+  for (const candidate of candidates || []) {
+    pushArtwork(urls, candidate);
+  }
+}
+
+export function getEntryImageUrls(entry?: Entry): string[] {
+  if (!entry) return [];
+
+  const urls: string[] = [];
+
+  pushArtwork(urls, entry.artwork?.selected);
 
   switch (entry.type) {
     case "producer":
-      return firstUrl(entry.avatarUrl, entry.coverUrl, entry.portraitUrl);
+      pushUrl(urls, entry.avatarUrl);
+      pushArtworkList(urls, entry.artwork?.candidates);
+      pushUrl(urls, entry.coverUrl);
+      pushUrl(urls, entry.portraitUrl);
+      break;
     case "singer":
-      return firstUrl(entry.portraitUrl, entry.avatarUrl, entry.coverUrl);
+      pushUrl(urls, entry.portraitUrl);
+      pushArtworkList(urls, entry.artwork?.candidates);
+      pushUrl(urls, entry.avatarUrl);
+      pushUrl(urls, entry.coverUrl);
+      break;
     case "album":
     case "song":
-      return firstUrl(entry.coverUrl, entry.avatarUrl, entry.portraitUrl);
+      pushUrl(urls, entry.coverUrl);
+      pushArtworkList(urls, entry.artwork?.candidates);
+      pushUrl(urls, entry.avatarUrl);
+      pushUrl(urls, entry.portraitUrl);
+      break;
     case "custom":
-      return firstUrl(entry.coverUrl, entry.portraitUrl, entry.avatarUrl);
+      pushUrl(urls, entry.coverUrl);
+      pushUrl(urls, entry.portraitUrl);
+      pushUrl(urls, entry.avatarUrl);
+      pushArtworkList(urls, entry.artwork?.candidates);
+      break;
     default:
-      return firstUrl(entry.coverUrl, entry.avatarUrl, entry.portraitUrl);
+      pushUrl(urls, entry.coverUrl);
+      pushUrl(urls, entry.avatarUrl);
+      pushUrl(urls, entry.portraitUrl);
   }
+
+  for (const url of entry.imageFallbackUrls || []) {
+    pushUrl(urls, url);
+  }
+
+  return urls;
+}
+
+export function getEntryImageUrl(entry?: Entry): string | undefined {
+  return firstUrl(...getEntryImageUrls(entry));
+}
+
+export function getCellImageUrls(
+  cell: Pick<PreferenceCellData, "cellArtwork" | "entry">,
+): string[] {
+  const urls: string[] = [];
+  pushArtwork(urls, cell.cellArtwork);
+  for (const url of getEntryImageUrls(cell.entry)) {
+    pushUrl(urls, url);
+  }
+  return urls;
 }
 
 export function getCellImageUrl(
   cell: Pick<PreferenceCellData, "cellArtwork" | "entry">,
 ): string | undefined {
-  const cellArtworkUrl = getArtworkUrl(cell.cellArtwork);
-  if (cellArtworkUrl) return cellArtworkUrl;
-  return getEntryImageUrl(cell.entry);
+  return firstUrl(...getCellImageUrls(cell));
 }

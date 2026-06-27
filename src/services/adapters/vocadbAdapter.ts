@@ -1,4 +1,4 @@
-import type { Entry, SearchAdapter } from "../../types";
+import type { ArtworkCandidate, Entry, SearchAdapter, SourceLink } from "../../types";
 
 const VOCADB_BASE = "https://vocadb.net/api";
 const PROXY_PREFIXES = [
@@ -113,6 +113,145 @@ function getPictureUrls(picture?: {
   };
 }
 
+function makeArtworkCandidate(
+  id: string,
+  provider: ArtworkCandidate["provider"],
+  kind: ArtworkCandidate["kind"],
+  url: string | undefined,
+  sourceUrl: string,
+  confidence: number,
+  title?: string,
+): ArtworkCandidate | undefined {
+  if (!url) return undefined;
+  return {
+    id,
+    provider,
+    kind,
+    url,
+    sourceUrl,
+    title,
+    confidence,
+    corsSafe: false,
+    exportSafe: false,
+    createdAt: new Date().toISOString(),
+  };
+}
+
+function pushUnique<T>(items: T[], item: T | undefined): void {
+  if (item === undefined || items.includes(item)) return;
+  items.push(item);
+}
+
+function getYouTubeId(url: string): string | undefined {
+  const patterns = [
+    /youtu\.be\/([A-Za-z0-9_-]{6,})/,
+    /youtube\.com\/watch\?[^#]*v=([A-Za-z0-9_-]{6,})/,
+    /youtube\.com\/embed\/([A-Za-z0-9_-]{6,})/,
+    /youtube\.com\/shorts\/([A-Za-z0-9_-]{6,})/,
+  ];
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match?.[1]) return match[1];
+  }
+  return undefined;
+}
+
+function getBilibiliId(url: string): string | undefined {
+  return url.match(/bilibili\.com\/video\/(BV[A-Za-z0-9]+)/i)?.[1];
+}
+
+function getNiconicoNumericId(url: string): string | undefined {
+  return url.match(/nicovideo\.jp\/watch\/(?:sm|nm)(\d+)/i)?.[1] ||
+    url.match(/nico\.ms\/(?:sm|nm)(\d+)/i)?.[1];
+}
+
+function buildPvSourceLinks(pvs: VocaDBSong["pvs"] | undefined): SourceLink[] {
+  return (pvs || [])
+    .filter((pv) => pv.url)
+    .map((pv) => ({
+      label: pv.service || pv.name || "PV",
+      url: pv.url,
+    }));
+}
+
+function buildPvArtworkCandidates(songId: number, pvs: VocaDBSong["pvs"] | undefined): ArtworkCandidate[] {
+  const candidates: ArtworkCandidate[] = [];
+
+  for (const pv of pvs || []) {
+    const youtubeId = getYouTubeId(pv.url);
+    if (youtubeId) {
+      pushUnique(
+        candidates,
+        makeArtworkCandidate(
+          `vocadb-song-${songId}-youtube-${youtubeId}-hq`,
+          "youtube",
+          "video-thumbnail",
+          `https://i.ytimg.com/vi/${youtubeId}/hqdefault.jpg`,
+          pv.url,
+          0.72,
+          pv.name || "YouTube 缩略图",
+        ),
+      );
+      pushUnique(
+        candidates,
+        makeArtworkCandidate(
+          `vocadb-song-${songId}-youtube-${youtubeId}-mq`,
+          "youtube",
+          "video-thumbnail",
+          `https://img.youtube.com/vi/${youtubeId}/mqdefault.jpg`,
+          pv.url,
+          0.58,
+          pv.name || "YouTube 缩略图",
+        ),
+      );
+    }
+
+    const bilibiliId = getBilibiliId(pv.url);
+    if (bilibiliId) {
+      // Bilibili thumbnails require an API lookup, so keep the PV link as a
+      // manual fallback source instead of guessing an unstable image URL.
+      pushUnique(
+        candidates,
+        makeArtworkCandidate(
+          `vocadb-song-${songId}-bilibili-${bilibiliId}`,
+          "bilibili",
+          "video-thumbnail",
+          undefined,
+          pv.url,
+          0.4,
+          pv.name || "Bilibili PV",
+        ),
+      );
+    }
+
+    const niconicoId = getNiconicoNumericId(pv.url);
+    if (niconicoId) {
+      pushUnique(
+        candidates,
+        makeArtworkCandidate(
+          `vocadb-song-${songId}-niconico-${niconicoId}`,
+          "niconico",
+          "video-thumbnail",
+          `https://tn.smilevideo.jp/smile?i=${niconicoId}`,
+          pv.url,
+          0.62,
+          pv.name || "Niconico 缩略图",
+        ),
+      );
+    }
+  }
+
+  return candidates;
+}
+
+function candidateUrls(candidates: ArtworkCandidate[]): string[] {
+  const urls: string[] = [];
+  for (const candidate of candidates) {
+    pushUnique(urls, candidate.url);
+  }
+  return urls;
+}
+
 function songToEntry(s: VocaDBSong): Entry {
   const singers: string[] = [];
   const producers: string[] = [];
@@ -127,6 +266,29 @@ function songToEntry(s: VocaDBSong): Entry {
   }
 
   const picture = getPictureUrls(s.mainPicture);
+  const vocadbUrl = `https://vocadb.net/S/${s.id}`;
+  const pvArtwork = buildPvArtworkCandidates(s.id, s.pvs);
+  const vocadbArtwork = [
+    makeArtworkCandidate(
+      `vocadb-song-${s.id}-main-thumb`,
+      "vocadb",
+      "song-cover",
+      picture.thumb,
+      vocadbUrl,
+      0.82,
+      "VocaDB 缩略图",
+    ),
+    makeArtworkCandidate(
+      `vocadb-song-${s.id}-main-original`,
+      "vocadb",
+      "song-cover",
+      picture.primary,
+      vocadbUrl,
+      0.78,
+      "VocaDB 原图",
+    ),
+  ].filter(Boolean) as ArtworkCandidate[];
+  const artworkCandidates = [...vocadbArtwork, ...pvArtwork];
 
   return {
     id: `vocadb-song-${s.id}`,
@@ -137,9 +299,14 @@ function songToEntry(s: VocaDBSong): Entry {
     producers,
     singers,
     year: s.publishDate?.slice(0, 4),
-    coverUrl: picture.primary,
+    coverUrl: picture.thumb || picture.primary,
+    imageFallbackUrls: candidateUrls(artworkCandidates),
+    artwork: {
+      candidates: artworkCandidates,
+    },
     sourceLinks: [
-      { label: "VocaDB", url: `https://vocadb.net/S/${s.id}` },
+      { label: "VocaDB", url: vocadbUrl },
+      ...buildPvSourceLinks(s.pvs),
     ],
     tags: [s.songType, ...(s.tags || []).map((t) => t.name)],
     createdAt: s.createDate || new Date().toISOString(),
@@ -150,6 +317,27 @@ function songToEntry(s: VocaDBSong): Entry {
 function artistToEntry(a: VocaDBArtist): Entry {
   const isSinger = ["Vocaloid", "CeVIO", "SynthesizerV", "UTAU", "NEUTRINO", "VOICEVOX"].includes(a.artistType);
   const picture = getPictureUrls(a.mainPicture);
+  const vocadbUrl = `https://vocadb.net/Ar/${a.id}`;
+  const artworkCandidates = [
+    makeArtworkCandidate(
+      `vocadb-artist-${a.id}-main-thumb`,
+      "vocadb",
+      isSinger ? "singer-portrait" : "producer-avatar",
+      picture.thumb,
+      vocadbUrl,
+      0.82,
+      "VocaDB 缩略图",
+    ),
+    makeArtworkCandidate(
+      `vocadb-artist-${a.id}-main-original`,
+      "vocadb",
+      isSinger ? "singer-portrait" : "producer-avatar",
+      picture.primary,
+      vocadbUrl,
+      0.78,
+      "VocaDB 原图",
+    ),
+  ].filter(Boolean) as ArtworkCandidate[];
 
   return {
     id: `vocadb-artist-${a.id}`,
@@ -161,8 +349,12 @@ function artistToEntry(a: VocaDBArtist): Entry {
     singers: [],
     avatarUrl: isSinger ? picture.thumb : picture.primary,
     portraitUrl: isSinger ? picture.primary : undefined,
+    imageFallbackUrls: candidateUrls(artworkCandidates),
+    artwork: {
+      candidates: artworkCandidates,
+    },
     sourceLinks: [
-      { label: "VocaDB", url: `https://vocadb.net/Ar/${a.id}` },
+      { label: "VocaDB", url: vocadbUrl },
     ],
     tags: [a.artistType],
     createdAt: a.createDate || new Date().toISOString(),
@@ -172,6 +364,27 @@ function artistToEntry(a: VocaDBArtist): Entry {
 
 function albumToEntry(a: VocaDBAlbum): Entry {
   const picture = getPictureUrls(a.mainPicture);
+  const vocadbUrl = `https://vocadb.net/Al/${a.id}`;
+  const artworkCandidates = [
+    makeArtworkCandidate(
+      `vocadb-album-${a.id}-main-thumb`,
+      "vocadb",
+      "album-cover",
+      picture.thumb,
+      vocadbUrl,
+      0.82,
+      "VocaDB 缩略图",
+    ),
+    makeArtworkCandidate(
+      `vocadb-album-${a.id}-main-original`,
+      "vocadb",
+      "album-cover",
+      picture.primary,
+      vocadbUrl,
+      0.78,
+      "VocaDB 原图",
+    ),
+  ].filter(Boolean) as ArtworkCandidate[];
 
   return {
     id: `vocadb-album-${a.id}`,
@@ -182,9 +395,13 @@ function albumToEntry(a: VocaDBAlbum): Entry {
     producers: a.artistString ? a.artistString.split(/,\s*/) : [],
     singers: [],
     year: a.releaseDate?.year,
-    coverUrl: picture.primary,
+    coverUrl: picture.thumb || picture.primary,
+    imageFallbackUrls: candidateUrls(artworkCandidates),
+    artwork: {
+      candidates: artworkCandidates,
+    },
     sourceLinks: [
-      { label: "VocaDB", url: `https://vocadb.net/Al/${a.id}` },
+      { label: "VocaDB", url: vocadbUrl },
     ],
     tags: [a.albumType],
     createdAt: a.createDate || new Date().toISOString(),

@@ -1,7 +1,7 @@
 import React from "react";
 import type { Entry, EntryType } from "../types";
 import { Search, Music, User, Mic, Disc3 } from "lucide-react";
-import { getEntryImageUrl } from "../services/artwork";
+import { getEntryImageUrls } from "../services/artwork";
 
 interface SearchPanelProps {
   query: string;
@@ -77,7 +77,8 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
   return (
     <div className="max-h-64 space-y-1 overflow-y-auto">
       {filtered.map((entry) => {
-        const imageUrl = getEntryImageUrl(entry);
+        const imageUrls = getEntryImageUrls(entry);
+        const imageUrl = imageUrls[0];
         return (
           <button
             key={entry.id}
@@ -98,7 +99,23 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
               style={{ background: "var(--result-bg)" }}
             >
               {imageUrl ? (
-                <img src={imageUrl} alt="" className="h-full w-full object-cover" />
+                <img
+                  src={imageUrl}
+                  alt=""
+                  className="h-full w-full object-cover"
+                  data-fallback-index="0"
+                  onError={(event) => {
+                    const img = event.currentTarget;
+                    const nextIndex = Number(img.dataset.fallbackIndex || "0") + 1;
+                    const nextUrl = imageUrls[nextIndex];
+                    if (nextUrl) {
+                      img.dataset.fallbackIndex = String(nextIndex);
+                      img.src = nextUrl;
+                    } else {
+                      img.style.display = "none";
+                    }
+                  }}
+                />
               ) : (
                 <div className="flex h-full w-full items-center justify-center" style={{ opacity: 0.4 }}>
                   {TYPE_ICONS[entry.type]}
