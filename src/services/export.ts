@@ -1,5 +1,5 @@
 import type { Entry, PreferenceCellData } from "../types";
-import { getCellImageUrls } from "./artwork";
+import { getCellExportImageUrls } from "./artwork";
 
 type ExportTheme = "miku" | "tianyi" | "kagamine" | "luka" | "kaito" | "meiko" | string;
 type ExportMode = "dark" | "light" | string;
@@ -356,7 +356,7 @@ async function drawCell(
 
   const imageX = x;
   const imageY = y;
-  const image = await loadFirstDrawableImage(getCellImageUrls(cell));
+  const image = await loadFirstDrawableImage(getCellExportImageUrls(cell));
   if (image) {
     drawImageCover(
       ctx,

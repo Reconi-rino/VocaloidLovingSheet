@@ -130,6 +130,27 @@ export function buildLrcApiCoverUrl(entry: Entry): string | undefined {
   return `https://api.lrc.cx/cover?${params.toString()}`;
 }
 
+function isDataOrBlobUrl(url: string): boolean {
+  return url.startsWith("data:image/") || url.startsWith("blob:");
+}
+
+function isLrcApiUrl(url: string): boolean {
+  return /^https:\/\/api\.lrc\.cx\/cover\?/i.test(url);
+}
+
+function isKnownExportFragileUrl(url: string): boolean {
+  try {
+    const hostname = new URL(url).hostname.toLowerCase();
+    return hostname === "static.vocadb.net" ||
+      hostname.endsWith(".ytimg.com") ||
+      hostname === "img.youtube.com" ||
+      hostname === "i.ytimg.com" ||
+      hostname === "tn.smilevideo.jp";
+  } catch {
+    return false;
+  }
+}
+
 export function getEntryImageUrls(entry?: Entry): string[] {
   if (!entry) return [];
 
@@ -181,6 +202,28 @@ export function getEntryImageUrls(entry?: Entry): string[] {
   return urls;
 }
 
+export function getEntryExportImageUrls(entry?: Entry): string[] {
+  const urls = getEntryImageUrls(entry);
+  const localUrls = urls.filter(isDataOrBlobUrl);
+  const lrcApiUrls = urls.filter((url) => !isDataOrBlobUrl(url) && isLrcApiUrl(url));
+  const stableRemoteUrls = urls.filter((url) =>
+    !isDataOrBlobUrl(url) &&
+    !isLrcApiUrl(url) &&
+    !isKnownExportFragileUrl(url)
+  );
+  const fragileRemoteUrls = urls.filter((url) =>
+    !isDataOrBlobUrl(url) &&
+    !isLrcApiUrl(url) &&
+    isKnownExportFragileUrl(url)
+  );
+
+  const ordered: string[] = [];
+  for (const url of [...localUrls, ...lrcApiUrls, ...stableRemoteUrls, ...fragileRemoteUrls]) {
+    pushUrl(ordered, url);
+  }
+  return ordered;
+}
+
 export function getEntryImageUrl(entry?: Entry): string | undefined {
   return firstUrl(...getEntryImageUrls(entry));
 }
@@ -192,6 +235,23 @@ export function getCellImageUrls(
   pushArtwork(urls, cell.cellArtwork);
   for (const url of getEntryImageUrls(cell.entry)) {
     pushUrl(urls, url);
+  }
+  return urls;
+}
+
+export function getCellExportImageUrls(
+  cell: Pick<PreferenceCellData, "cellArtwork" | "entry">,
+): string[] {
+  const urls: string[] = [];
+  const cellArtworkUrl = getArtworkUrl(cell.cellArtwork);
+  if (cellArtworkUrl && isDataOrBlobUrl(cellArtworkUrl)) {
+    pushUrl(urls, cellArtworkUrl);
+  }
+  for (const url of getEntryExportImageUrls(cell.entry)) {
+    pushUrl(urls, url);
+  }
+  if (cellArtworkUrl && !isDataOrBlobUrl(cellArtworkUrl)) {
+    pushUrl(urls, cellArtworkUrl);
   }
   return urls;
 }
