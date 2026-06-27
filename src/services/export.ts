@@ -24,13 +24,19 @@ export async function exportToPNG(
   element: HTMLElement,
   filename = "vocaloid-loving-sheet.png",
 ): Promise<void> {
+  // Temporarily remove cross-origin images from the DOM before export.
+  // display:none is not enough — html-to-image still processes them.
   const imgs = Array.from(element.querySelectorAll("img"));
-  const hidden: { img: HTMLImageElement; display: string }[] = [];
+  const removed: { img: HTMLImageElement; parent: Node; next: Node | null }[] = [];
 
   for (const img of imgs) {
     if (isCrossOrigin(img.src)) {
-      hidden.push({ img, display: img.style.display });
-      img.style.display = "none";
+      removed.push({
+        img,
+        parent: img.parentNode!,
+        next: img.nextSibling,
+      });
+      img.remove();
     }
   }
 
@@ -48,8 +54,13 @@ export async function exportToPNG(
     link.href = dataUrl;
     link.click();
   } finally {
-    for (const { img, display } of hidden) {
-      img.style.display = display;
+    // Restore removed images
+    for (const { img, parent, next } of removed) {
+      if (next) {
+        parent.insertBefore(img, next);
+      } else {
+        parent.appendChild(img);
+      }
     }
   }
 }
