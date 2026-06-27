@@ -31,7 +31,6 @@ import {
 
 import Toolbar from "./components/Toolbar";
 import PreferenceGrid from "./components/PreferenceGrid";
-import ExportGrid from "./components/ExportGrid";
 import EntryEditorModal from "./components/EntryEditorModal";
 import PreviewPage from "./components/PreviewPage";
 import type { ThemeName, DisplayMode } from "./components/ThemeSwitcher";
@@ -73,7 +72,6 @@ function App() {
 
   /* -- refs -- */
   const gridRef = useRef<HTMLDivElement>(null);
-  const exportGridRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -237,15 +235,14 @@ function App() {
 
   /* -- export PNG -- */
   const handleExportPng = useCallback(async () => {
-    if (!exportGridRef.current) return;
     try {
-      await exportToPNG(exportGridRef.current, `${title}.png`);
+      await exportToPNG({ title, author, cells, theme, mode }, `${title}.png`);
       showToast("PNG 已导出");
     } catch (err) {
       console.error("PNG export failed:", err);
       showToast("PNG 导出失败");
     }
-  }, [title, showToast]);
+  }, [title, author, cells, theme, mode, showToast]);
 
   /* -- export JSON -- */
   const handleExportJson = useCallback(() => {
@@ -398,16 +395,6 @@ function App() {
           onSaveAsCustom={handleSaveAsCustom}
         />
       )}
-
-      {/* Hidden export-optimized grid (captured by html-to-image) */}
-      <div style={{ position: "absolute", left: "-9999px", top: 0 }}>
-        <ExportGrid
-          ref={exportGridRef}
-          title={title}
-          author={author}
-          cells={cells}
-        />
-      </div>
     </div>
   );
 }
