@@ -1,9 +1,11 @@
 import type { Entry, SearchAdapter } from "../../types";
 
 const VOCADB_BASE = "https://vocadb.net/api";
-const PROXY_PREFIX = "https://api.allorigins.win/raw?url=";
-const PROXY_TIMEOUT = 8000;
-const DIRECT_TIMEOUT = 3000;
+const PROXY_PREFIXES = [
+  "https://api.allorigins.win/raw?url=",
+];
+const PROXY_TIMEOUT = 20000;
+const DIRECT_TIMEOUT = 6000;
 
 let useProxy = false;
 
@@ -17,7 +19,13 @@ export function getProxyEnabled(): boolean {
 
 export async function proxiedFetch(url: string, init?: RequestInit): Promise<Response> {
   if (useProxy) {
-    return fetch(`${PROXY_PREFIX}${encodeURIComponent(url)}`, init);
+    const encoded = encodeURIComponent(url);
+    for (const prefix of PROXY_PREFIXES) {
+      try {
+        return await fetchWithTimeout(`${prefix}${encoded}`, PROXY_TIMEOUT);
+      } catch { /* try next */ }
+    }
+    throw new Error("All proxies failed");
   }
   try {
     const ctrl = new AbortController();
@@ -30,9 +38,16 @@ export async function proxiedFetch(url: string, init?: RequestInit): Promise<Res
       clearTimeout(timer);
     }
   } catch {
-    const res = await fetch(`${PROXY_PREFIX}${encodeURIComponent(url)}`, init);
-    useProxy = true;
-    return res;
+    // Try proxies
+    const encoded = encodeURIComponent(url);
+    for (const prefix of PROXY_PREFIXES) {
+      try {
+        const res = await fetchWithTimeout(`${prefix}${encoded}`, PROXY_TIMEOUT);
+        useProxy = true;
+        return res;
+      } catch { /* try next */ }
+    }
+    throw new Error("All proxies failed");
   }
 }
 
@@ -166,51 +181,73 @@ async function fetchWithTimeout(url: string, ms: number): Promise<Response> {
   }
 }
 
+async function tryFetch<T>(url: string, timeout: number): Promise<T> {
+  const res = await fetchWithTimeout(url, timeout);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+async function fetchViaProxies<T>(url: string): Promise<T> {
+  const encoded = encodeURIComponent(url);
+  let lastErr: unknown;
+  for (const prefix of PROXY_PREFIXES) {
+    try {
+      return await tryFetch<T>(`${prefix}${encoded}`, PROXY_TIMEOUT);
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr;
+}
+
 async function fetchJSON<T>(url: string): Promise<T> {
   if (useProxy) {
-    const res = await fetchWithTimeout(`${PROXY_PREFIX}${encodeURIComponent(url)}`, PROXY_TIMEOUT);
-    if (!res.ok) throw new Error(`Proxy error: ${res.status}`);
-    return res.json();
+    return fetchViaProxies<T>(url);
   }
 
   try {
-    const res = await fetchWithTimeout(url, DIRECT_TIMEOUT);
-    if (!res.ok) throw new Error(`VocaDB API error: ${res.status}`);
-    return res.json();
+    return await tryFetch<T>(url, DIRECT_TIMEOUT);
   } catch {
-    // Direct failed — auto-switch to proxy
-    const res = await fetchWithTimeout(`${PROXY_PREFIX}${encodeURIComponent(url)}`, PROXY_TIMEOUT);
-    if (!res.ok) throw new Error(`Proxy error: ${res.status}`);
+    // Direct failed — try proxies
+    const result = await fetchViaProxies<T>(url);
     useProxy = true;
-    return res.json();
+    return result;
   }
 }
 
-async function searchSongs(query: string): Promise<Entry[]> {
-  // VocaDB API: use maxEntries, sort=RatingScore so originals rank first
+interface SearchOpts {
+  start?: number;
+  maxEntries?: number;
+}
+
+async function searchSongs(query: string, opts: SearchOpts = {}): Promise<Entry[]> {
+  const { start = 0, maxEntries = 10 } = opts;
   const data = await fetchJSON<{ items: VocaDBSong[] }>(
-    `${VOCADB_BASE}/songs?query=${encodeURIComponent(query)}&maxEntries=10&fields=MainPicture,PVs,Tags&sort=RatingScore&lang=Default`
+    `${VOCADB_BASE}/songs?query=${encodeURIComponent(query)}&start=${start}&maxEntries=${maxEntries}&fields=MainPicture,PVs,Tags&sort=RatingScore&lang=Default`
   );
   return (data.items || []).map(songToEntry);
 }
 
-async function searchProducers(query: string): Promise<Entry[]> {
+async function searchProducers(query: string, opts: SearchOpts = {}): Promise<Entry[]> {
+  const { start = 0, maxEntries = 10 } = opts;
   const data = await fetchJSON<{ items: VocaDBArtist[] }>(
-    `${VOCADB_BASE}/artists?query=${encodeURIComponent(query)}&maxEntries=10&fields=MainPicture&artistTypes=Producer`
+    `${VOCADB_BASE}/artists?query=${encodeURIComponent(query)}&start=${start}&maxEntries=${maxEntries}&fields=MainPicture&artistTypes=Producer`
   );
   return (data.items || []).map(artistToEntry).filter((e) => e.type === "producer");
 }
 
-async function searchSingers(query: string): Promise<Entry[]> {
+async function searchSingers(query: string, opts: SearchOpts = {}): Promise<Entry[]> {
+  const { start = 0, maxEntries = 10 } = opts;
   const data = await fetchJSON<{ items: VocaDBArtist[] }>(
-    `${VOCADB_BASE}/artists?query=${encodeURIComponent(query)}&maxEntries=10&fields=MainPicture&artistTypes=Vocaloid,CeVIO,SynthesizerV,UTAU,NEUTRINO,VOICEVOX`
+    `${VOCADB_BASE}/artists?query=${encodeURIComponent(query)}&start=${start}&maxEntries=${maxEntries}&fields=MainPicture&artistTypes=Vocaloid,CeVIO,SynthesizerV,UTAU,NEUTRINO,VOICEVOX`
   );
   return (data.items || []).map(artistToEntry);
 }
 
-async function searchAlbums(query: string): Promise<Entry[]> {
+async function searchAlbums(query: string, opts: SearchOpts = {}): Promise<Entry[]> {
+  const { start = 0, maxEntries = 10 } = opts;
   const data = await fetchJSON<{ items: VocaDBAlbum[] }>(
-    `${VOCADB_BASE}/albums?query=${encodeURIComponent(query)}&maxEntries=10&fields=MainPicture`
+    `${VOCADB_BASE}/albums?query=${encodeURIComponent(query)}&start=${start}&maxEntries=${maxEntries}&fields=MainPicture`
   );
   return (data.items || []).map(albumToEntry);
 }

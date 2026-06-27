@@ -8,6 +8,8 @@ interface SearchPanelProps {
   onSelect: (entry: Entry) => void;
   typeFilter?: EntryType;
   loading?: boolean;
+  hasMore?: boolean;
+  onLoadMore?: () => void;
 }
 
 const TYPE_ICONS: Record<EntryType, React.ReactNode> = {
@@ -32,6 +34,8 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
   onSelect,
   typeFilter,
   loading = false,
+  hasMore = false,
+  onLoadMore,
 }) => {
   const filtered = React.useMemo(() => {
     if (!typeFilter) return entries;
@@ -141,6 +145,19 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
           </button>
         );
       })}
+
+      {/* Load more */}
+      {hasMore && onLoadMore && (
+        <button
+          type="button"
+          onClick={onLoadMore}
+          disabled={loading}
+          className="w-full rounded-md py-2 text-xs font-medium transition-opacity hover:opacity-80 disabled:opacity-40"
+          style={{ color: "var(--accent)" }}
+        >
+          {loading ? "加载中..." : "加载更多结果 ↓"}
+        </button>
+      )}
     </div>
   );
 };

@@ -95,8 +95,8 @@ export interface PreferenceCellData {
 export interface SearchAdapter {
   name: string;
   enabled: boolean;
-  searchSongs(query: string): Promise<Entry[]>;
-  searchProducers(query: string): Promise<Entry[]>;
-  searchSingers(query: string): Promise<Entry[]>;
-  searchAlbums(query: string): Promise<Entry[]>;
+  searchSongs(query: string, opts?: { start?: number; maxEntries?: number }): Promise<Entry[]>;
+  searchProducers(query: string, opts?: { start?: number; maxEntries?: number }): Promise<Entry[]>;
+  searchSingers(query: string, opts?: { start?: number; maxEntries?: number }): Promise<Entry[]>;
+  searchAlbums(query: string, opts?: { start?: number; maxEntries?: number }): Promise<Entry[]>;
 }

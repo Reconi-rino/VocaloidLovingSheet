@@ -88,24 +88,47 @@ const EntryEditorModal: React.FC<EntryEditorModalProps> = ({
   // Online VocaDB search
   const [onlineResults, setOnlineResults] = React.useState<Entry[]>([]);
   const [onlineLoading, setOnlineLoading] = React.useState(false);
+  const [hasMore, setHasMore] = React.useState(false);
+  const PAGE_SIZE = 10;
 
   React.useEffect(() => {
     if (!debouncedQuery.trim() || typeFilter === "custom") {
       setOnlineResults([]);
+      setHasMore(false);
       return;
     }
     setOnlineLoading(true);
     const timeout = setTimeout(() => {
-      searchOnline(debouncedQuery, typeFilter)
+      searchOnline(debouncedQuery, typeFilter, { start: 0, maxEntries: PAGE_SIZE })
         .then((results) => {
           const localIds = new Set(searchResults.map((e) => e.id));
-          setOnlineResults(results.filter((e) => !localIds.has(e.id)));
+          const filtered = results.filter((e) => !localIds.has(e.id));
+          setOnlineResults(filtered);
+          setHasMore(results.length >= PAGE_SIZE);
         })
-        .catch(() => setOnlineResults([]))
+        .catch(() => { setOnlineResults([]); setHasMore(false); })
         .finally(() => setOnlineLoading(false));
     }, 500);
     return () => clearTimeout(timeout);
   }, [debouncedQuery, typeFilter, searchResults]);
+
+  const handleLoadMore = React.useCallback(() => {
+    if (onlineLoading || typeFilter === "custom") return;
+    setOnlineLoading(true);
+    const offset = onlineResults.length + searchResults.length;
+    searchOnline(debouncedQuery, typeFilter, { start: offset, maxEntries: PAGE_SIZE })
+      .then((results) => {
+        const existingIds = new Set([
+          ...searchResults.map((e) => e.id),
+          ...onlineResults.map((e) => e.id),
+        ]);
+        const newResults = results.filter((e) => !existingIds.has(e.id));
+        setOnlineResults((prev) => [...prev, ...newResults]);
+        setHasMore(results.length >= PAGE_SIZE);
+      })
+      .catch(() => setHasMore(false))
+      .finally(() => setOnlineLoading(false));
+  }, [debouncedQuery, typeFilter, onlineResults, searchResults, onlineLoading]);
 
   const combinedResults = React.useMemo(() => {
     return [...searchResults, ...onlineResults];
@@ -299,6 +322,8 @@ const EntryEditorModal: React.FC<EntryEditorModalProps> = ({
               onSelect={handleSelectFromSearch}
               typeFilter={typeFilter}
               loading={onlineLoading}
+              hasMore={hasMore}
+              onLoadMore={handleLoadMore}
             />
             {onlineResults.length > 0 && (
               <div className="flex items-center gap-1 px-3 py-1 text-[10px]" style={{ opacity: 0.4 }}>

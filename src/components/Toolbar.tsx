@@ -84,7 +84,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
               color: proxy ? "var(--accent-text)" : "var(--page-text)",
               opacity: proxy ? 1 : 0.6,
             }}
-            title={proxy ? "代理模式已开启（通过 allorigins 中转 VocaDB 请求）" : "开启代理模式（无法直连 VocaDB 时使用）"}
+            title={proxy ? "代理模式已开启（通过 allorigins.win 中转请求）" : "开启代理模式（国内用户建议开启，否则搜索可能失败）"}
           >
             <Globe size={13} />
             {proxy ? "代理中" : "代理"}

@@ -88,19 +88,71 @@ import { createVocaDBAdapter, searchSongsByArtistName } from "./adapters/vocadbA
 
 const vocadb = createVocaDBAdapter();
 
+// ── Search result cache ──────────────────────────────
+const CACHE_KEY = "vocaloid-search-cache";
+const CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+interface CacheEntry {
+  ts: number;
+  results: Entry[];
+}
+
+function loadCache(): Record<string, CacheEntry> {
+  try {
+    return JSON.parse(localStorage.getItem(CACHE_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function saveCache(cache: Record<string, CacheEntry>) {
+  try {
+    // Prune old entries
+    const now = Date.now();
+    for (const k of Object.keys(cache)) {
+      if (now - cache[k].ts > CACHE_TTL) delete cache[k];
+    }
+    localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+  } catch { /* quota exceeded, ignore */ }
+}
+
+function cacheKey(query: string, type: string, start: number): string {
+  return `${type}:${query.toLowerCase().trim()}:${start}`;
+}
+
+function getCached(query: string, type: string, start: number): Entry[] | null {
+  const cache = loadCache();
+  const entry = cache[cacheKey(query, type, start)];
+  if (entry && Date.now() - entry.ts < CACHE_TTL) return entry.results;
+  return null;
+}
+
+function setCached(query: string, type: string, start: number, results: Entry[]) {
+  const cache = loadCache();
+  cache[cacheKey(query, type, start)] = { ts: Date.now(), results };
+  saveCache(cache);
+}
+
 export async function searchOnline(
   query: string,
   type: EntryType,
+  opts?: { start?: number; maxEntries?: number },
 ): Promise<Entry[]> {
   if (!query.trim()) return [];
+  const start = opts?.start ?? 0;
+
+  // Check cache first
+  const cached = getCached(query, type, start);
+  if (cached) return cached;
+
   try {
     let results: Entry[] = [];
 
     switch (type) {
       case "song":
-        results = await vocadb.searchSongs(query);
-        // If few direct matches, also search by artist name
-        if (results.length < 3) {
+        results = await vocadb.searchSongs(query, opts);
+        // If few direct matches and first page, also search by artist name
+        if (results.length < 3 && start === 0) {
           const byArtist = await searchSongsByArtistName(query);
           const seenIds = new Set(results.map((e) => e.id));
           for (const s of byArtist) {
@@ -110,16 +162,23 @@ export async function searchOnline(
             }
           }
         }
-        return results;
+        break;
       case "album":
-        return await vocadb.searchAlbums(query);
+        results = await vocadb.searchAlbums(query, opts);
+        break;
       case "producer":
-        return await vocadb.searchProducers(query);
+        results = await vocadb.searchProducers(query, opts);
+        break;
       case "singer":
-        return await vocadb.searchSingers(query);
+        results = await vocadb.searchSingers(query, opts);
+        break;
       default:
-        return await vocadb.searchSongs(query);
+        results = await vocadb.searchSongs(query, opts);
     }
+
+    // Cache successful results
+    if (results.length > 0) setCached(query, type, start, results);
+    return results;
   } catch (err) {
     console.warn("VocaDB search failed:", err);
     return [];
