@@ -1,13 +1,34 @@
 import { toPng } from "html-to-image";
 
 /**
- * Check if an image URL is cross-origin (cannot be read by canvas).
+ * Wait for an image to finish loading.
  */
-function isCrossOrigin(url: string): boolean {
-  if (!url || url.startsWith("data:")) return false;
+function waitForLoad(img: HTMLImageElement): Promise<void> {
+  if (img.complete) return Promise.resolve();
+  return new Promise((resolve) => {
+    img.onload = () => resolve();
+    img.onerror = () => resolve();
+  });
+}
+
+/**
+ * Test if an image's pixels can be read by canvas (not tainted by CORS).
+ * Returns true for same-origin, data URLs, and cross-origin images with
+ * proper CORS headers. Returns false for CORS-blocked images.
+ */
+async function isCanvasReadable(img: HTMLImageElement): Promise<boolean> {
+  if (!img.src || img.src.startsWith("data:")) return true;
+  await waitForLoad(img);
+  if (!img.naturalWidth) return false;
   try {
-    const parsed = new URL(url, window.location.origin);
-    return parsed.origin !== window.location.origin;
+    const c = document.createElement("canvas");
+    c.width = 1;
+    c.height = 1;
+    const ctx = c.getContext("2d");
+    if (!ctx) return false;
+    ctx.drawImage(img, 0, 0, 1, 1);
+    c.toDataURL();
+    return true;
   } catch {
     return false;
   }
@@ -17,28 +38,24 @@ function isCrossOrigin(url: string): boolean {
  * Export an HTML element as a PNG image and trigger download.
  * Renders at 2x scale for high-DPI clarity.
  *
- * Cross-origin images (e.g. from static.vocadb.net) are hidden before
- * export since the browser cannot embed them without CORS headers.
+ * Images that cannot be read (CORS-blocked) are temporarily removed
+ * from the DOM so the export succeeds with all remaining images.
  */
 export async function exportToPNG(
   element: HTMLElement,
   filename = "vocaloid-loving-sheet.png",
 ): Promise<void> {
-  // Temporarily remove cross-origin images from the DOM before export.
-  // display:none is not enough — html-to-image still processes them.
   const imgs = Array.from(element.querySelectorAll("img"));
-  const removed: { img: HTMLImageElement; parent: Node; next: Node | null }[] = [];
 
-  for (const img of imgs) {
-    if (isCrossOrigin(img.src)) {
-      removed.push({
-        img,
-        parent: img.parentNode!,
-        next: img.nextSibling,
-      });
+  // Test each image — remove ones that taint the canvas
+  const removed: { img: HTMLImageElement; parent: Node; next: Node | null }[] = [];
+  await Promise.all(
+    imgs.map(async (img) => {
+      if (await isCanvasReadable(img)) return;
+      removed.push({ img, parent: img.parentNode!, next: img.nextSibling });
       img.remove();
-    }
-  }
+    }),
+  );
 
   try {
     const dataUrl = await toPng(element, {
@@ -54,13 +71,9 @@ export async function exportToPNG(
     link.href = dataUrl;
     link.click();
   } finally {
-    // Restore removed images
     for (const { img, parent, next } of removed) {
-      if (next) {
-        parent.insertBefore(img, next);
-      } else {
-        parent.appendChild(img);
-      }
+      if (next) parent.insertBefore(img, next);
+      else parent.appendChild(img);
     }
   }
 }
