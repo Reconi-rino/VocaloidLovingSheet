@@ -11,6 +11,7 @@ export type ArtworkProvider =
   | "musicbrainz"
   | "discogs"
   | "spotify"
+  | "lrcapi"
   | "official-site"
   | "placeholder";
 

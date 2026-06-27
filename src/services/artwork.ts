@@ -81,22 +81,74 @@ function pushArtworkList(urls: string[], candidates: ArtworkCandidate[] | undefi
   }
 }
 
+function firstText(...values: Array<string | number | undefined>): string | undefined {
+  for (const value of values) {
+    const text = String(value ?? "").trim();
+    if (text) return text;
+  }
+  return undefined;
+}
+
+function firstName(names: string[] | undefined): string | undefined {
+  return names?.find((name) => name.trim().length > 0)?.trim();
+}
+
+export function buildLrcApiCoverUrl(entry: Entry): string | undefined {
+  const params = new URLSearchParams();
+
+  if (entry.type === "song") {
+    const title = firstText(
+      entry.originalTitle,
+      entry.displayTitle,
+      entry.japaneseTitle,
+      entry.englishTitle,
+      entry.chineseTitle,
+      entry.title,
+    );
+    const artist = firstName(entry.producers) || firstName(entry.singers);
+    if (!title || !artist) return undefined;
+
+    params.set("title", title);
+    params.set("artist", artist);
+    if (entry.album) params.set("album", entry.album);
+  } else if (entry.type === "album") {
+    const album = firstText(entry.originalTitle, entry.displayTitle, entry.title);
+    const artist = firstName(entry.producers) || firstName(entry.singers);
+    if (!album) return undefined;
+
+    params.set("album", album);
+    if (artist) params.set("artist", artist);
+  } else if (entry.type === "producer" || entry.type === "singer") {
+    const artist = firstText(entry.originalTitle, entry.displayTitle, entry.title);
+    if (!artist) return undefined;
+
+    params.set("artist", artist);
+  } else {
+    return undefined;
+  }
+
+  return `https://api.lrc.cx/cover?${params.toString()}`;
+}
+
 export function getEntryImageUrls(entry?: Entry): string[] {
   if (!entry) return [];
 
   const urls: string[] = [];
+  const lrcApiCoverUrl = buildLrcApiCoverUrl(entry);
 
   pushArtwork(urls, entry.artwork?.selected);
 
   switch (entry.type) {
     case "producer":
       pushUrl(urls, entry.avatarUrl);
+      pushUrl(urls, lrcApiCoverUrl);
       pushArtworkList(urls, entry.artwork?.candidates);
       pushUrl(urls, entry.coverUrl);
       pushUrl(urls, entry.portraitUrl);
       break;
     case "singer":
       pushUrl(urls, entry.portraitUrl);
+      pushUrl(urls, lrcApiCoverUrl);
       pushArtworkList(urls, entry.artwork?.candidates);
       pushUrl(urls, entry.avatarUrl);
       pushUrl(urls, entry.coverUrl);
@@ -104,12 +156,14 @@ export function getEntryImageUrls(entry?: Entry): string[] {
     case "album":
     case "song":
       pushUrl(urls, entry.coverUrl);
+      pushUrl(urls, lrcApiCoverUrl);
       pushArtworkList(urls, entry.artwork?.candidates);
       pushUrl(urls, entry.avatarUrl);
       pushUrl(urls, entry.portraitUrl);
       break;
     case "custom":
       pushUrl(urls, entry.coverUrl);
+      pushUrl(urls, lrcApiCoverUrl);
       pushUrl(urls, entry.portraitUrl);
       pushUrl(urls, entry.avatarUrl);
       pushArtworkList(urls, entry.artwork?.candidates);
