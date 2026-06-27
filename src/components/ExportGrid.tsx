@@ -62,21 +62,20 @@ const ExportGrid = React.forwardRef<HTMLDivElement, ExportGridProps>(
           {cellEntries.map((cell) => {
             const { entry, categoryLabel } = cell;
             const imageUrl = getImageUrl(cell);
-            const placeholderUrl =
-              entry && !imageUrl
-                ? getArtworkUrl(
-                    createPlaceholderArtwork(
-                      entry,
-                      entry.type === "singer"
-                        ? "singer-portrait"
-                        : entry.type === "producer"
-                          ? "producer-avatar"
-                          : entry.type === "album"
-                            ? "album-cover"
-                            : "song-cover",
-                    ),
-                  )
-                : undefined;
+            const placeholderUrl = entry
+              ? getArtworkUrl(
+                  createPlaceholderArtwork(
+                    entry,
+                    entry.type === "singer"
+                      ? "singer-portrait"
+                      : entry.type === "producer"
+                        ? "producer-avatar"
+                        : entry.type === "album"
+                          ? "album-cover"
+                          : "song-cover",
+                  ),
+                )
+              : undefined;
             const displayUrl = imageUrl || placeholderUrl;
             const fallbackChar = entry?.title?.charAt(0) || categoryLabel.charAt(0);
 
@@ -101,6 +100,7 @@ const ExportGrid = React.forwardRef<HTMLDivElement, ExportGridProps>(
                     <img
                       src={displayUrl}
                       alt=""
+                      data-export-placeholder={placeholderUrl}
                       style={{
                         width: "100%",
                         height: "100%",

@@ -16,6 +16,10 @@ function hashStr(s: string): number {
   return Math.abs(h);
 }
 
+function svgDataUrl(svg: string): string {
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
 export function createPlaceholderArtwork(
   entry: Entry,
   kind: ArtworkKind,
@@ -35,7 +39,7 @@ export function createPlaceholderArtwork(
     id: `placeholder-${entry.id}-${kind}`,
     provider: "placeholder",
     kind,
-    dataUrl: `data:image/svg+xml;base64,${btoa(svg)}`,
+    dataUrl: svgDataUrl(svg),
     title: `${entry.title} 占位图`,
     confidence: 0.1,
     corsSafe: true,
