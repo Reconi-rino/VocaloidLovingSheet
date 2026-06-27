@@ -149,17 +149,18 @@ function isLrcApiUrl(url: string): boolean {
   return /^https:\/\/api\.lrc\.cx\/cover\?/i.test(url);
 }
 
-function isKnownExportFragileUrl(url: string): boolean {
+function canProxyUrl(url: string): boolean {
   try {
-    const hostname = new URL(url).hostname.toLowerCase();
-    return hostname === "static.vocadb.net" ||
-      hostname.endsWith(".ytimg.com") ||
-      hostname === "img.youtube.com" ||
-      hostname === "i.ytimg.com" ||
-      hostname === "tn.smilevideo.jp";
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" || parsed.protocol === "http:";
   } catch {
     return false;
   }
+}
+
+function proxiedImageUrl(url: string): string | undefined {
+  if (isDataOrBlobUrl(url) || !canProxyUrl(url)) return undefined;
+  return `/api/image?url=${encodeURIComponent(url)}`;
 }
 
 function getEntryDefaultImageUrls(entry?: Entry): string[] {
@@ -216,19 +217,19 @@ function getEntryDefaultImageUrls(entry?: Entry): string[] {
 function orderUrlsForLrcApiFirst(urls: string[]): string[] {
   const localUrls = urls.filter(isDataOrBlobUrl);
   const lrcApiUrls = urls.filter((url) => !isDataOrBlobUrl(url) && isLrcApiUrl(url));
-  const stableRemoteUrls = urls.filter((url) =>
-    !isDataOrBlobUrl(url) &&
-    !isLrcApiUrl(url) &&
-    !isKnownExportFragileUrl(url)
-  );
-  const fragileRemoteUrls = urls.filter((url) =>
-    !isDataOrBlobUrl(url) &&
-    !isLrcApiUrl(url) &&
-    isKnownExportFragileUrl(url)
-  );
+  const otherRemoteUrls = urls.filter((url) => !isDataOrBlobUrl(url) && !isLrcApiUrl(url));
 
   const ordered: string[] = [];
-  for (const url of [...localUrls, ...lrcApiUrls, ...stableRemoteUrls, ...fragileRemoteUrls]) {
+  for (const url of [...localUrls, ...lrcApiUrls, ...otherRemoteUrls]) {
+    pushUrl(ordered, url);
+  }
+  return ordered;
+}
+
+function withProxyFallbacks(urls: string[]): string[] {
+  const ordered: string[] = [];
+  for (const url of urls) {
+    pushUrl(ordered, proxiedImageUrl(url));
     pushUrl(ordered, url);
   }
   return ordered;
@@ -239,8 +240,12 @@ export function getEntryImageUrls(entry?: Entry): string[] {
   return artworkSourceMode === "lrcapi-first" ? orderUrlsForLrcApiFirst(urls) : urls;
 }
 
-export function getEntryExportImageUrls(entry?: Entry): string[] {
-  return orderUrlsForLrcApiFirst(getEntryDefaultImageUrls(entry));
+export function getEntryExportImageUrls(
+  entry?: Entry,
+  mode: ArtworkSourceMode = artworkSourceMode,
+): string[] {
+  const urls = getEntryDefaultImageUrls(entry);
+  return withProxyFallbacks(mode === "lrcapi-first" ? orderUrlsForLrcApiFirst(urls) : urls);
 }
 
 export function getEntryImageUrl(entry?: Entry): string | undefined {
@@ -260,16 +265,18 @@ export function getCellImageUrls(
 
 export function getCellExportImageUrls(
   cell: Pick<PreferenceCellData, "cellArtwork" | "entry">,
+  mode: ArtworkSourceMode = artworkSourceMode,
 ): string[] {
   const urls: string[] = [];
   const cellArtworkUrl = getArtworkUrl(cell.cellArtwork);
   if (cellArtworkUrl && isDataOrBlobUrl(cellArtworkUrl)) {
     pushUrl(urls, cellArtworkUrl);
   }
-  for (const url of getEntryExportImageUrls(cell.entry)) {
+  for (const url of getEntryExportImageUrls(cell.entry, mode)) {
     pushUrl(urls, url);
   }
   if (cellArtworkUrl && !isDataOrBlobUrl(cellArtworkUrl)) {
+    pushUrl(urls, proxiedImageUrl(cellArtworkUrl));
     pushUrl(urls, cellArtworkUrl);
   }
   return urls;

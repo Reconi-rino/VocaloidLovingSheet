@@ -1,5 +1,5 @@
 import type { ArtworkSourceMode, Entry, PreferenceCellData } from "../types";
-import { getCellExportImageUrls, getCellImageUrls } from "./artwork";
+import { getCellExportImageUrls } from "./artwork";
 
 type ExportTheme = "miku" | "tianyi" | "kagamine" | "luka" | "kaito" | "meiko" | string;
 type ExportMode = "dark" | "light" | string;
@@ -358,10 +358,7 @@ async function drawCell(
 
   const imageX = x;
   const imageY = y;
-  const imageUrls = artworkSourceMode === "lrcapi-first"
-    ? getCellExportImageUrls(cell)
-    : getCellImageUrls(cell);
-  const image = await loadFirstDrawableImage(imageUrls);
+  const image = await loadFirstDrawableImage(getCellExportImageUrls(cell, artworkSourceMode));
   if (image) {
     drawImageCover(
       ctx,
