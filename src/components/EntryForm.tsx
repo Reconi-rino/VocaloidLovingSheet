@@ -10,8 +10,18 @@ interface EntryFormProps {
 }
 
 const EntryForm: React.FC<EntryFormProps> = ({ entry, onChange }) => {
+  if (!entry) return null;
+
   const update = (patch: Partial<Entry>) => {
-    onChange({ ...entry, ...patch });
+    onChange({
+      ...entry,
+      ...patch,
+      aliases: patch.aliases ?? (Array.isArray(entry.aliases) ? entry.aliases : []),
+      producers: patch.producers ?? (Array.isArray(entry.producers) ? entry.producers : []),
+      singers: patch.singers ?? (Array.isArray(entry.singers) ? entry.singers : []),
+      sourceLinks: patch.sourceLinks ?? (Array.isArray(entry.sourceLinks) ? entry.sourceLinks : []),
+      tags: patch.tags ?? (Array.isArray(entry.tags) ? entry.tags : []),
+    });
   };
 
   const addSourceLink = () => {

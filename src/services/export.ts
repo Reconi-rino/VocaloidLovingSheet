@@ -1,29 +1,13 @@
 import { toPng } from "html-to-image";
 
-const WARNING_PLACEHOLDER =
-  "data:image/svg+xml," +
-  encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
-      <rect width="200" height="200" fill="#374151" rx="8"/>
-      <text x="100" y="85" text-anchor="middle" font-size="40" fill="#fbbf24" font-family="sans-serif">⚠</text>
-      <text x="100" y="120" text-anchor="middle" font-size="14" fill="#fbbf24" font-family="sans-serif">图片加载失败</text>
-      <text x="100" y="145" text-anchor="middle" font-size="11" fill="#9ca3af" font-family="sans-serif">请手动替换图片源</text>
-    </svg>`,
-  );
-
 /**
- * Test if an <img> element's pixels are readable by canvas.
- * Cross-origin images without CORS headers will taint the canvas.
+ * Check if an image URL is cross-origin (cannot be read by canvas).
  */
-function isCanvasReadable(img: HTMLImageElement): boolean {
-  if (!img.complete || !img.naturalWidth) return false;
+function isCrossOrigin(url: string): boolean {
+  if (!url || url.startsWith("data:")) return false;
   try {
-    const c = document.createElement("canvas");
-    c.width = 1;
-    c.height = 1;
-    c.getContext("2d")!.drawImage(img, 0, 0, 1, 1);
-    c.toDataURL();
-    return true;
+    const parsed = new URL(url, window.location.origin);
+    return parsed.origin !== window.location.origin;
   } catch {
     return false;
   }
@@ -33,38 +17,22 @@ function isCanvasReadable(img: HTMLImageElement): boolean {
  * Export an HTML element as a PNG image and trigger download.
  * Renders at 2x scale for high-DPI clarity.
  *
- * Pre-checks images: CORS-blocked images are replaced with a warning
- * placeholder telling the user to swap the image source manually.
+ * Cross-origin images (e.g. from static.vocadb.net) are hidden before
+ * export since the browser cannot embed them without CORS headers.
  */
-/**
- * Wait for an image to finish loading.
- */
-function waitForImage(img: HTMLImageElement): Promise<void> {
-  if (img.complete) return Promise.resolve();
-  return new Promise((resolve) => {
-    img.onload = () => resolve();
-    img.onerror = () => resolve();
-  });
-}
-
 export async function exportToPNG(
   element: HTMLElement,
   filename = "vocaloid-loving-sheet.png",
 ): Promise<void> {
   const imgs = Array.from(element.querySelectorAll("img"));
-  const originals: { img: HTMLImageElement; src: string }[] = [];
+  const hidden: { img: HTMLImageElement; display: string }[] = [];
 
-  await Promise.all(
-    imgs.map(async (img) => {
-      const src = img.src;
-      if (!src || src.startsWith("data:")) return;
-      originals.push({ img, src });
-      await waitForImage(img);
-      if (!isCanvasReadable(img)) {
-        img.src = WARNING_PLACEHOLDER;
-      }
-    }),
-  );
+  for (const img of imgs) {
+    if (isCrossOrigin(img.src)) {
+      hidden.push({ img, display: img.style.display });
+      img.style.display = "none";
+    }
+  }
 
   try {
     const dataUrl = await toPng(element, {
@@ -80,8 +48,8 @@ export async function exportToPNG(
     link.href = dataUrl;
     link.click();
   } finally {
-    for (const { img, src } of originals) {
-      img.src = src;
+    for (const { img, display } of hidden) {
+      img.style.display = display;
     }
   }
 }
@@ -133,14 +101,6 @@ interface ShareCellData {
 
 /**
  * Generate a plain-text summary suitable for sharing on social media.
- *
- * Format:
- * ```
- * 术曲个人喜好表
- * 入坑作：xxx
- * 最喜欢的：xxx
- * ...
- * ```
  */
 export function generateShareText(
   title: string,

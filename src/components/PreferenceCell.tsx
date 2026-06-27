@@ -14,19 +14,16 @@ interface PreferenceCellProps {
 function getImageUrl(data: PreferenceCellData): string | undefined {
   const { entry, cellArtwork } = data;
 
-  // 1. Cell override artwork
   if (cellArtwork) {
     const url = getArtworkUrl(cellArtwork);
     if (url) return url;
   }
 
-  // 2. Entry artwork selected
   if (entry?.artwork?.selected) {
     const url = getArtworkUrl(entry.artwork.selected);
     if (url) return url;
   }
 
-  // 3. Legacy coverUrl / avatarUrl / portraitUrl
   if (entry) {
     return entry.coverUrl || entry.avatarUrl || entry.portraitUrl;
   }
@@ -46,8 +43,13 @@ const PreferenceCell: React.FC<PreferenceCellProps> = ({
   const hasEntry = !!entry;
 
   const imageUrl = getImageUrl(data);
+  const [imgError, setImgError] = React.useState(false);
 
-  // Generate placeholder for empty cells with entry
+  // Reset error state when image URL changes
+  React.useEffect(() => {
+    setImgError(false);
+  }, [imageUrl]);
+
   const placeholderUrl = React.useMemo(() => {
     if (!entry || imageUrl) return undefined;
     return getArtworkUrl(createPlaceholderArtwork(entry,
@@ -62,14 +64,25 @@ const PreferenceCell: React.FC<PreferenceCellProps> = ({
   const subtitle = React.useMemo(() => {
     if (!entry) return "";
     const parts: string[] = [];
-    if (entry.producers.length > 0) parts.push(entry.producers.join(", "));
-    if (entry.singers.length > 0) parts.push(entry.singers.join(", "));
+    if (Array.isArray(entry.producers) && entry.producers.length > 0) parts.push(entry.producers.join(", "));
+    if (Array.isArray(entry.singers) && entry.singers.length > 0) parts.push(entry.singers.join(", "));
     return parts.join(" / ");
   }, [entry]);
 
   const fallbackChar = entry?.title
     ? entry.title.charAt(0)
     : categoryLabel.charAt(0);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onClick();
+    }
+    if ((e.key === "Delete" || e.key === "Backspace") && hasEntry && onClear) {
+      e.preventDefault();
+      onClear();
+    }
+  };
 
   return (
     <div
@@ -84,12 +97,7 @@ const PreferenceCell: React.FC<PreferenceCellProps> = ({
       onClick={onClick}
       role="button"
       tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onClick();
-        }
-      }}
+      onKeyDown={handleKeyDown}
     >
       {/* Category label */}
       <div
@@ -107,7 +115,7 @@ const PreferenceCell: React.FC<PreferenceCellProps> = ({
         {hasEntry ? (
           <>
             {displayUrl && (
-              <div className="mb-1 h-16 w-full overflow-hidden rounded">
+              <div className="relative mb-1 h-16 w-full overflow-hidden rounded">
                 <img
                   src={displayUrl}
                   alt={entry.title}
@@ -120,8 +128,17 @@ const PreferenceCell: React.FC<PreferenceCellProps> = ({
                     } else {
                       target.style.display = "none";
                     }
+                    setImgError(true);
                   }}
                 />
+                {imgError && imageUrl && (
+                  <div
+                    className="absolute inset-0 flex items-center justify-center text-[10px] font-medium"
+                    style={{ background: "rgba(0,0,0,0.6)", color: "#fbbf24" }}
+                  >
+                    图片加载失败
+                  </div>
+                )}
               </div>
             )}
             {!displayUrl && (
