@@ -1,4 +1,4 @@
-import type { PreferenceCellData, Entry } from "../types";
+import type { PreferenceCellData, Entry, ArtworkSourceMode } from "../types";
 
 const KEYS = {
   SHEET: "vocaloid-sheet",
@@ -6,6 +6,7 @@ const KEYS = {
   THEME: "vocaloid-theme",
   MODE: "vocaloid-mode",
   PROXY: "vocaloid-proxy",
+  ARTWORK_SOURCE_MODE: "vocaloid-artwork-source-mode",
   TITLE: "vocaloid-title",
   AUTHOR: "vocaloid-author",
 } as const;
@@ -64,6 +65,15 @@ export function loadProxy(): boolean {
   return localStorage.getItem(KEYS.PROXY) === "1";
 }
 
+export function saveArtworkSourceMode(mode: ArtworkSourceMode): void {
+  localStorage.setItem(KEYS.ARTWORK_SOURCE_MODE, mode);
+}
+
+export function loadArtworkSourceMode(): ArtworkSourceMode {
+  const raw = localStorage.getItem(KEYS.ARTWORK_SOURCE_MODE);
+  return raw === "lrcapi-first" ? "lrcapi-first" : "auto";
+}
+
 export function saveTitle(title: string): void {
   localStorage.setItem(KEYS.TITLE, title);
 }
@@ -86,6 +96,7 @@ export function clearAll(): void {
   localStorage.removeItem(KEYS.THEME);
   localStorage.removeItem(KEYS.MODE);
   localStorage.removeItem(KEYS.PROXY);
+  localStorage.removeItem(KEYS.ARTWORK_SOURCE_MODE);
   localStorage.removeItem(KEYS.TITLE);
   localStorage.removeItem(KEYS.AUTHOR);
 }

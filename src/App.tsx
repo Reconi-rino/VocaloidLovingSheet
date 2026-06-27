@@ -1,7 +1,7 @@
 import "./styles/globals.css";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import type { Entry, PreferenceCellData } from "./types";
+import type { ArtworkSourceMode, Entry, PreferenceCellData } from "./types";
 import { categories } from "./data/categories";
 import { seedEntries } from "./data/seedEntries";
 import {
@@ -15,6 +15,8 @@ import {
   loadMode,
   saveProxy,
   loadProxy,
+  saveArtworkSourceMode,
+  loadArtworkSourceMode,
   saveTitle,
   loadTitle,
   saveAuthor,
@@ -22,6 +24,7 @@ import {
   clearAll,
 } from "./services/storage";
 import { setProxyEnabled } from "./services/adapters/vocadbAdapter";
+import { setArtworkSourceMode as applyArtworkSourceMode } from "./services/artwork";
 import {
   exportToPNG,
   exportToJSON,
@@ -60,6 +63,8 @@ function App() {
   const [theme, setTheme] = useState<ThemeName>("miku");
   const [mode, setMode] = useState<DisplayMode>("dark");
   const [proxy, setProxy] = useState(false);
+  const [artworkSourceMode, setArtworkSourceMode] = useState<ArtworkSourceMode>("auto");
+  const [imageReloadKey, setImageReloadKey] = useState(0);
   const [title, setTitle] = useState("术曲个人喜好表");
   const [author, setAuthor] = useState("");
   const [cells, setCells] = useState<Record<string, PreferenceCellData>>(
@@ -99,6 +104,10 @@ function App() {
         setProxy(true);
         setProxyEnabled(true);
       }
+
+      const savedArtworkSourceMode = loadArtworkSourceMode();
+      setArtworkSourceMode(savedArtworkSourceMode);
+      applyArtworkSourceMode(savedArtworkSourceMode);
 
       const savedSheet = loadSheet();
       setCells(mergeCells(buildDefaultCells(), savedSheet ?? undefined));
@@ -165,6 +174,18 @@ function App() {
   }, [loaded, proxy]);
 
   useEffect(() => {
+    try {
+      applyArtworkSourceMode(artworkSourceMode);
+      if (loaded) {
+        saveArtworkSourceMode(artworkSourceMode);
+        setImageReloadKey((key) => key + 1);
+      }
+    } catch (err) {
+      console.error("Failed to apply artwork source mode:", err);
+    }
+  }, [loaded, artworkSourceMode]);
+
+  useEffect(() => {
     if (!loaded) return;
     saveTitle(title);
   }, [loaded, title]);
@@ -226,34 +247,35 @@ function App() {
       saveSheet(cells);
       saveCustomEntries(customEntries);
       saveTheme(theme);
+      saveArtworkSourceMode(artworkSourceMode);
       showToast("已保存");
     } catch (err) {
       console.error("Save failed:", err);
       showToast("保存失败");
     }
-  }, [cells, customEntries, theme, showToast]);
+  }, [cells, customEntries, theme, artworkSourceMode, showToast]);
 
   /* -- export PNG -- */
   const handleExportPng = useCallback(async () => {
     try {
-      await exportToPNG({ title, author, cells, theme, mode }, `${title}.png`);
+      await exportToPNG({ title, author, cells, theme, mode, artworkSourceMode }, `${title}.png`);
       showToast("PNG 已导出");
     } catch (err) {
       console.error("PNG export failed:", err);
       showToast("PNG 导出失败");
     }
-  }, [title, author, cells, theme, mode, showToast]);
+  }, [title, author, cells, theme, mode, artworkSourceMode, showToast]);
 
   /* -- export JSON -- */
   const handleExportJson = useCallback(() => {
     try {
-      exportToJSON({ theme, mode, title, author, cells, customEntries });
+      exportToJSON({ theme, mode, artworkSourceMode, title, author, cells, customEntries });
       showToast("JSON 已导出");
     } catch (err) {
       console.error("JSON export failed:", err);
       showToast("JSON 导出失败");
     }
-  }, [theme, title, author, cells, customEntries, showToast]);
+  }, [theme, mode, artworkSourceMode, title, author, cells, customEntries, showToast]);
 
   /* -- import JSON (trigger hidden file input) -- */
   const handleImportJson = useCallback(() => {
@@ -268,6 +290,7 @@ function App() {
         const data = (await importFromJSON(file)) as {
           theme?: ThemeName;
           mode?: DisplayMode;
+          artworkSourceMode?: ArtworkSourceMode;
           title?: string;
           author?: string;
           cells?: Record<string, PreferenceCellData>;
@@ -275,6 +298,9 @@ function App() {
         };
         if (data.theme) setTheme(data.theme);
         if (data.mode === "light" || data.mode === "dark") setMode(data.mode);
+        if (data.artworkSourceMode === "auto" || data.artworkSourceMode === "lrcapi-first") {
+          setArtworkSourceMode(data.artworkSourceMode);
+        }
         if (data.title) setTitle(data.title);
         if (data.author !== undefined) setAuthor(data.author);
         if (data.cells) setCells(mergeCells(buildDefaultCells(), data.cells));
@@ -310,6 +336,8 @@ function App() {
     setCustomEntries([]);
     setTitle("术曲个人喜好表");
     setAuthor("");
+    setArtworkSourceMode("auto");
+    setImageReloadKey((key) => key + 1);
     showToast("已清空");
   }, [showToast]);
 
@@ -368,6 +396,11 @@ function App() {
         onModeChange={setMode}
         proxy={proxy}
         onProxyChange={setProxy}
+        artworkSourceMode={artworkSourceMode}
+        onArtworkSourceModeChange={(nextMode) => {
+          setArtworkSourceMode(nextMode);
+          showToast(nextMode === "lrcapi-first" ? "已切换到 LrcAPI 图源优先" : "已切换到默认图源");
+        }}
         onSave={handleSave}
         onExportPNG={handleExportPng}
         onExportJSON={handleExportJson}
@@ -382,6 +415,8 @@ function App() {
           ref={gridRef}
           cells={cells}
           onCellClick={handleCellClick}
+          imageReloadKey={imageReloadKey}
+          artworkSourceMode={artworkSourceMode}
         />
       </main>
 

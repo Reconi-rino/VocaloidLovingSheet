@@ -1,5 +1,5 @@
-import type { Entry, PreferenceCellData } from "../types";
-import { getCellExportImageUrls } from "./artwork";
+import type { ArtworkSourceMode, Entry, PreferenceCellData } from "../types";
+import { getCellExportImageUrls, getCellImageUrls } from "./artwork";
 
 type ExportTheme = "miku" | "tianyi" | "kagamine" | "luka" | "kaito" | "meiko" | string;
 type ExportMode = "dark" | "light" | string;
@@ -10,6 +10,7 @@ interface CanvasExportOptions {
   cells: Record<string, PreferenceCellData>;
   theme?: ExportTheme;
   mode?: ExportMode;
+  artworkSourceMode?: ArtworkSourceMode;
 }
 
 interface Palette {
@@ -351,12 +352,16 @@ async function drawCell(
   x: number,
   y: number,
   palette: Palette,
+  artworkSourceMode: ArtworkSourceMode,
 ): Promise<void> {
   drawCellFrame(ctx, cell, x, y, palette);
 
   const imageX = x;
   const imageY = y;
-  const image = await loadFirstDrawableImage(getCellExportImageUrls(cell));
+  const imageUrls = artworkSourceMode === "lrcapi-first"
+    ? getCellExportImageUrls(cell)
+    : getCellImageUrls(cell);
+  const image = await loadFirstDrawableImage(imageUrls);
   if (image) {
     drawImageCover(
       ctx,
@@ -471,7 +476,7 @@ export async function exportToPNG(
     const row = Math.floor(i / 5);
     const x = MARGIN_X + col * (CELL_WIDTH + GRID_GAP_X);
     const y = gridTop + row * (CELL_HEIGHT + GRID_GAP_Y);
-    await drawCell(ctx, cells[i], x, y, palette);
+    await drawCell(ctx, cells[i], x, y, palette, options.artworkSourceMode || "auto");
   }
 
   downloadBlob(await canvasToBlob(canvas), filename);

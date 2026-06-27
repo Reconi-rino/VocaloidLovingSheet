@@ -1,5 +1,7 @@
 export type EntryType = "song" | "producer" | "singer" | "album" | "custom";
 
+export type ArtworkSourceMode = "auto" | "lrcapi-first";
+
 export type ArtworkProvider =
   | "upload"
   | "manual-url"

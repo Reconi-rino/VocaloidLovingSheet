@@ -8,19 +8,23 @@ import {
   Trash2,
   Globe,
   Monitor,
+  RefreshCcw,
 } from "lucide-react";
 import ThemeSwitcher from "./ThemeSwitcher";
 import type { ThemeName, DisplayMode } from "./ThemeSwitcher";
+import type { ArtworkSourceMode } from "../types";
 
 interface ToolbarProps {
   theme: ThemeName;
   mode: DisplayMode;
   proxy: boolean;
+  artworkSourceMode: ArtworkSourceMode;
   title: string;
   author: string;
   onThemeChange: (theme: ThemeName) => void;
   onModeChange: (mode: DisplayMode) => void;
   onProxyChange: (enabled: boolean) => void;
+  onArtworkSourceModeChange: (mode: ArtworkSourceMode) => void;
   onTitleChange: (title: string) => void;
   onAuthorChange: (author: string) => void;
   onSave: () => void;
@@ -35,11 +39,13 @@ const Toolbar: React.FC<ToolbarProps> = ({
   theme,
   mode,
   proxy,
+  artworkSourceMode,
   title,
   author,
   onThemeChange,
   onModeChange,
   onProxyChange,
+  onArtworkSourceModeChange,
   onTitleChange,
   onAuthorChange,
   onSave,
@@ -89,6 +95,29 @@ const Toolbar: React.FC<ToolbarProps> = ({
           >
             <Globe size={13} />
             {proxy ? "代理中" : "代理"}
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              onArtworkSourceModeChange(
+                artworkSourceMode === "lrcapi-first" ? "auto" : "lrcapi-first",
+              )
+            }
+            className="flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-medium transition-all"
+            style={{
+              borderColor: artworkSourceMode === "lrcapi-first" ? "var(--accent)" : "var(--input-border)",
+              background: artworkSourceMode === "lrcapi-first" ? "var(--accent)" : "transparent",
+              color: artworkSourceMode === "lrcapi-first" ? "var(--accent-text)" : "var(--page-text)",
+              opacity: artworkSourceMode === "lrcapi-first" ? 1 : 0.6,
+            }}
+            title={
+              artworkSourceMode === "lrcapi-first"
+                ? "当前所有图片优先使用 LrcAPI，点击恢复默认来源"
+                : "切换为 LrcAPI 优先，并强制重载所有图片"
+            }
+          >
+            <RefreshCcw size={13} />
+            {artworkSourceMode === "lrcapi-first" ? "Lrc图源" : "默认图源"}
           </button>
         </div>
       </div>

@@ -4,6 +4,7 @@ import type {
   ArtworkKind,
   ArtworkCandidate,
   PreferenceCellData,
+  ArtworkSourceMode,
 } from "../types";
 
 // ── Placeholder ────────────────────────────────────────
@@ -15,6 +16,16 @@ const PLACEHOLDER_COLORS: Record<EntryType, string[]> = {
   album: ["#ffd700", "#e6c200", "#ccaa00"],
   custom: ["#a78bfa", "#8b6fe6", "#7054cc"],
 };
+
+let artworkSourceMode: ArtworkSourceMode = "auto";
+
+export function setArtworkSourceMode(mode: ArtworkSourceMode): void {
+  artworkSourceMode = mode;
+}
+
+export function getArtworkSourceMode(): ArtworkSourceMode {
+  return artworkSourceMode;
+}
 
 function hashStr(s: string): number {
   let h = 0;
@@ -151,7 +162,7 @@ function isKnownExportFragileUrl(url: string): boolean {
   }
 }
 
-export function getEntryImageUrls(entry?: Entry): string[] {
+function getEntryDefaultImageUrls(entry?: Entry): string[] {
   if (!entry) return [];
 
   const urls: string[] = [];
@@ -202,8 +213,7 @@ export function getEntryImageUrls(entry?: Entry): string[] {
   return urls;
 }
 
-export function getEntryExportImageUrls(entry?: Entry): string[] {
-  const urls = getEntryImageUrls(entry);
+function orderUrlsForLrcApiFirst(urls: string[]): string[] {
   const localUrls = urls.filter(isDataOrBlobUrl);
   const lrcApiUrls = urls.filter((url) => !isDataOrBlobUrl(url) && isLrcApiUrl(url));
   const stableRemoteUrls = urls.filter((url) =>
@@ -222,6 +232,15 @@ export function getEntryExportImageUrls(entry?: Entry): string[] {
     pushUrl(ordered, url);
   }
   return ordered;
+}
+
+export function getEntryImageUrls(entry?: Entry): string[] {
+  const urls = getEntryDefaultImageUrls(entry);
+  return artworkSourceMode === "lrcapi-first" ? orderUrlsForLrcApiFirst(urls) : urls;
+}
+
+export function getEntryExportImageUrls(entry?: Entry): string[] {
+  return orderUrlsForLrcApiFirst(getEntryDefaultImageUrls(entry));
 }
 
 export function getEntryImageUrl(entry?: Entry): string | undefined {

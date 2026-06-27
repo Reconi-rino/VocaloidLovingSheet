@@ -1,5 +1,5 @@
 import React from "react";
-import type { PreferenceCellData } from "../types";
+import type { ArtworkSourceMode, PreferenceCellData } from "../types";
 import PreferenceCell from "./PreferenceCell";
 
 interface PreferenceGridProps {
@@ -7,10 +7,12 @@ interface PreferenceGridProps {
   onCellClick: (categoryId: string) => void;
   onCellClear?: (categoryId: string) => void;
   onCellCopy?: (categoryId: string) => void;
+  imageReloadKey?: number;
+  artworkSourceMode?: ArtworkSourceMode;
 }
 
 const PreferenceGrid = React.forwardRef<HTMLDivElement, PreferenceGridProps>(
-  ({ cells, onCellClick, onCellClear, onCellCopy }, ref) => {
+  ({ cells, onCellClick, onCellClear, onCellCopy, imageReloadKey = 0, artworkSourceMode = "auto" }, ref) => {
     const cellEntries = Object.values(cells);
 
     return (
@@ -20,7 +22,7 @@ const PreferenceGrid = React.forwardRef<HTMLDivElement, PreferenceGridProps>(
       >
         {cellEntries.map((cell) => (
           <PreferenceCell
-            key={cell.categoryId}
+            key={`${cell.categoryId}-${artworkSourceMode}-${imageReloadKey}`}
             data={cell}
             onClick={() => onCellClick(cell.categoryId)}
             onClear={
