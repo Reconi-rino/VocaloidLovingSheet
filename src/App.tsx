@@ -13,8 +13,11 @@ import {
   loadTheme,
   saveMode,
   loadMode,
+  saveProxy,
+  loadProxy,
   clearAll,
 } from "./services/storage";
+import { setProxyEnabled } from "./services/adapters/vocadbAdapter";
 import {
   exportToPNG,
   exportToJSON,
@@ -52,6 +55,7 @@ function App() {
   /* -- state -- */
   const [theme, setTheme] = useState<ThemeName>("miku");
   const [mode, setMode] = useState<DisplayMode>("dark");
+  const [proxy, setProxy] = useState(false);
   const [title, setTitle] = useState("术曲个人喜好表");
   const [author, setAuthor] = useState("");
   const [cells, setCells] = useState<Record<string, PreferenceCellData>>(
@@ -86,6 +90,12 @@ function App() {
 
       const savedMode = loadMode();
       if (savedMode === "light" || savedMode === "dark") setMode(savedMode);
+
+      const savedProxy = loadProxy();
+      if (savedProxy) {
+        setProxy(true);
+        setProxyEnabled(true);
+      }
 
       const savedSheet = loadSheet();
       setCells(mergeCells(buildDefaultCells(), savedSheet ?? undefined));
@@ -134,6 +144,16 @@ function App() {
       console.error("Failed to save mode:", err);
     }
   }, [loaded, mode]);
+
+  useEffect(() => {
+    if (!loaded) return;
+    try {
+      saveProxy(proxy);
+      setProxyEnabled(proxy);
+    } catch (err) {
+      console.error("Failed to save proxy:", err);
+    }
+  }, [loaded, proxy]);
 
   /* ============ cell interactions ============ */
   const handleCellClick = useCallback((categoryId: string) => {
@@ -316,6 +336,8 @@ function App() {
         onThemeChange={setTheme}
         mode={mode}
         onModeChange={setMode}
+        proxy={proxy}
+        onProxyChange={setProxy}
         onSave={handleSave}
         onExportPNG={handleExportPng}
         onExportJSON={handleExportJson}

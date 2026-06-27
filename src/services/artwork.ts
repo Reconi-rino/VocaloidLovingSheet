@@ -6,6 +6,7 @@ import type {
   ArtworkCandidate,
   ResolvedArtwork,
 } from "../types";
+import { proxiedFetch } from "./adapters/vocadbAdapter";
 
 const ARTWORK_CACHE_KEY = "vocaloid-artwork-cache";
 
@@ -103,7 +104,7 @@ async function fetchVocaDBArtwork(entry: Entry): Promise<ArtworkCandidate[]> {
 
     if (!searchUrl) return candidates;
 
-    const res = await fetch(searchUrl);
+    const res = await proxiedFetch(searchUrl);
     if (!res.ok) return candidates;
     const data = await res.json();
     const items = data.items || [];

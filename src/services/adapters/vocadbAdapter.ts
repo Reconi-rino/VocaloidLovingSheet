@@ -1,6 +1,40 @@
 import type { Entry, SearchAdapter } from "../../types";
 
 const VOCADB_BASE = "https://vocadb.net/api";
+const PROXY_PREFIX = "https://api.allorigins.win/raw?url=";
+const PROXY_TIMEOUT = 8000;
+const DIRECT_TIMEOUT = 3000;
+
+let useProxy = false;
+
+export function setProxyEnabled(enabled: boolean) {
+  useProxy = enabled;
+}
+
+export function getProxyEnabled(): boolean {
+  return useProxy;
+}
+
+export async function proxiedFetch(url: string, init?: RequestInit): Promise<Response> {
+  if (useProxy) {
+    return fetch(`${PROXY_PREFIX}${encodeURIComponent(url)}`, init);
+  }
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), DIRECT_TIMEOUT);
+    try {
+      const res = await fetch(url, { ...init, signal: ctrl.signal });
+      clearTimeout(timer);
+      return res;
+    } finally {
+      clearTimeout(timer);
+    }
+  } catch {
+    const res = await fetch(`${PROXY_PREFIX}${encodeURIComponent(url)}`, init);
+    useProxy = true;
+    return res;
+  }
+}
 
 interface VocaDBSong {
   id: number;
@@ -122,10 +156,34 @@ function albumToEntry(a: VocaDBAlbum): Entry {
   };
 }
 
+async function fetchWithTimeout(url: string, ms: number): Promise<Response> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await fetch(url, { signal: ctrl.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function fetchJSON<T>(url: string): Promise<T> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`VocaDB API error: ${res.status}`);
-  return res.json();
+  if (useProxy) {
+    const res = await fetchWithTimeout(`${PROXY_PREFIX}${encodeURIComponent(url)}`, PROXY_TIMEOUT);
+    if (!res.ok) throw new Error(`Proxy error: ${res.status}`);
+    return res.json();
+  }
+
+  try {
+    const res = await fetchWithTimeout(url, DIRECT_TIMEOUT);
+    if (!res.ok) throw new Error(`VocaDB API error: ${res.status}`);
+    return res.json();
+  } catch {
+    // Direct failed — auto-switch to proxy
+    const res = await fetchWithTimeout(`${PROXY_PREFIX}${encodeURIComponent(url)}`, PROXY_TIMEOUT);
+    if (!res.ok) throw new Error(`Proxy error: ${res.status}`);
+    useProxy = true;
+    return res.json();
+  }
 }
 
 async function searchSongs(query: string): Promise<Entry[]> {

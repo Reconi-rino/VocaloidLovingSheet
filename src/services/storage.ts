@@ -5,6 +5,7 @@ const KEYS = {
   CUSTOM_ENTRIES: "vocaloid-custom-entries",
   THEME: "vocaloid-theme",
   MODE: "vocaloid-mode",
+  PROXY: "vocaloid-proxy",
 } as const;
 
 export function saveSheet(
@@ -53,9 +54,18 @@ export function loadMode(): string | null {
   return localStorage.getItem(KEYS.MODE);
 }
 
+export function saveProxy(enabled: boolean): void {
+  localStorage.setItem(KEYS.PROXY, enabled ? "1" : "0");
+}
+
+export function loadProxy(): boolean {
+  return localStorage.getItem(KEYS.PROXY) === "1";
+}
+
 export function clearAll(): void {
   localStorage.removeItem(KEYS.SHEET);
   localStorage.removeItem(KEYS.CUSTOM_ENTRIES);
   localStorage.removeItem(KEYS.THEME);
   localStorage.removeItem(KEYS.MODE);
+  localStorage.removeItem(KEYS.PROXY);
 }

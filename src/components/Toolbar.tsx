@@ -6,6 +6,7 @@ import {
   Image,
   Copy,
   Trash2,
+  Globe,
 } from "lucide-react";
 import ThemeSwitcher from "./ThemeSwitcher";
 import type { ThemeName, DisplayMode } from "./ThemeSwitcher";
@@ -13,10 +14,12 @@ import type { ThemeName, DisplayMode } from "./ThemeSwitcher";
 interface ToolbarProps {
   theme: ThemeName;
   mode: DisplayMode;
+  proxy: boolean;
   title: string;
   author: string;
   onThemeChange: (theme: ThemeName) => void;
   onModeChange: (mode: DisplayMode) => void;
+  onProxyChange: (enabled: boolean) => void;
   onTitleChange: (title: string) => void;
   onAuthorChange: (author: string) => void;
   onSave: () => void;
@@ -30,10 +33,12 @@ interface ToolbarProps {
 const Toolbar: React.FC<ToolbarProps> = ({
   theme,
   mode,
+  proxy,
   title,
   author,
   onThemeChange,
   onModeChange,
+  onProxyChange,
   onTitleChange,
   onAuthorChange,
   onSave,
@@ -62,12 +67,29 @@ const Toolbar: React.FC<ToolbarProps> = ({
         <h1 className="shrink-0 text-xl font-bold" style={{ color: "var(--accent)" }}>
           术曲个人喜好表
         </h1>
-        <ThemeSwitcher
-          currentTheme={theme}
-          mode={mode}
-          onChange={onThemeChange}
-          onModeChange={onModeChange}
-        />
+        <div className="flex items-center gap-2">
+          <ThemeSwitcher
+            currentTheme={theme}
+            mode={mode}
+            onChange={onThemeChange}
+            onModeChange={onModeChange}
+          />
+          <button
+            type="button"
+            onClick={() => onProxyChange(!proxy)}
+            className="flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-medium transition-all"
+            style={{
+              borderColor: proxy ? "var(--accent)" : "var(--input-border)",
+              background: proxy ? "var(--accent)" : "transparent",
+              color: proxy ? "var(--accent-text)" : "var(--page-text)",
+              opacity: proxy ? 1 : 0.6,
+            }}
+            title={proxy ? "代理模式已开启（通过 allorigins 中转 VocaDB 请求）" : "开启代理模式（无法直连 VocaDB 时使用）"}
+          >
+            <Globe size={13} />
+            {proxy ? "代理中" : "代理"}
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
