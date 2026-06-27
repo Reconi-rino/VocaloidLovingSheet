@@ -27,7 +27,7 @@ npm run preview
 
 ### Vercel（推荐）
 
-项目包含 `vercel.json` 和 `api/image.ts`。部署到 Vercel 后，PNG 导出会优先通过同源接口代理远程图片：
+项目包含 `vercel.json`、`api/image.ts` 和 `api/vocadb.ts`。部署到 Vercel 后，PNG 导出会优先通过同源接口代理远程图片：
 
 ```text
 /api/image?url=<encoded remote image url>
@@ -37,9 +37,17 @@ npm run preview
 
 - 只接受 `http/https` 图片 URL。
 - 拒绝 localhost / local 地址。
-- 限制图片大小为 8MB。
+- 限制图片大小为 16MB。
 - 返回 `Access-Control-Allow-Origin: *`。
 - 设置 CDN 缓存头。
+
+在线搜索会优先通过同源 VocaDB 缓存代理：
+
+```text
+/api/vocadb?resource=songs&query=<keyword>&start=0&maxEntries=20
+```
+
+这个接口只允许访问 VocaDB 的 `songs` / `artists` / `albums` 查询，并对白名单参数做限制。接口会设置共享 CDN 缓存和服务端内存缓存，热门搜索词、热门歌手/歌曲相关分页能被所有用户复用；如果该接口不可用，前端会自动回退到原有的 VocaDB 直连和公共代理路径。
 
 部署命令：
 

@@ -1,13 +1,16 @@
 import type { ArtworkCandidate, Entry, SearchAdapter, SourceLink } from "../../types";
 
 const VOCADB_BASE = "https://vocadb.net/api";
+const SERVER_VOCADB_PATH = "/api/vocadb";
 const PROXY_PREFIXES = [
   "https://api.allorigins.win/raw?url=",
 ];
+const SERVER_API_TIMEOUT = 8000;
 const PROXY_TIMEOUT = 20000;
 const DIRECT_TIMEOUT = 6000;
 
 let useProxy = false;
+let serverApiDisabled = false;
 
 export function setProxyEnabled(enabled: boolean) {
   useProxy = enabled;
@@ -419,6 +422,10 @@ async function fetchWithTimeout(url: string, ms: number): Promise<Response> {
   }
 }
 
+function shouldUseServerApi(): boolean {
+  return typeof window !== "undefined" && !serverApiDisabled;
+}
+
 async function tryFetch<T>(url: string, timeout: number): Promise<T> {
   const res = await fetchWithTimeout(url, timeout);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -458,44 +465,102 @@ interface SearchOpts {
   maxEntries?: number;
 }
 
+async function fetchVocaDbResource<T>(
+  resource: "songs" | "artists" | "albums",
+  params: Record<string, string | number | undefined>,
+  directUrl: string,
+): Promise<T> {
+  if (shouldUseServerApi()) {
+    try {
+      const serverParams = new URLSearchParams({ resource });
+      for (const [key, value] of Object.entries(params)) {
+        if (value !== undefined && value !== "") serverParams.set(key, String(value));
+      }
+      return await tryFetch<T>(`${SERVER_VOCADB_PATH}?${serverParams.toString()}`, SERVER_API_TIMEOUT);
+    } catch {
+      serverApiDisabled = true;
+    }
+  }
+
+  return fetchJSON<T>(directUrl);
+}
+
 async function searchSongs(query: string, opts: SearchOpts = {}): Promise<Entry[]> {
   const { start = 0, maxEntries = 10 } = opts;
-  const data = await fetchJSON<{ items: VocaDBSong[] }>(
-    `${VOCADB_BASE}/songs?query=${encodeURIComponent(query)}&start=${start}&maxEntries=${maxEntries}&fields=MainPicture,PVs,Tags&sort=RatingScore&lang=Default`
-  );
+  const params = {
+    query,
+    start,
+    maxEntries,
+    fields: "MainPicture,PVs,Tags",
+    sort: "RatingScore",
+    lang: "Default",
+  };
+  const directUrl = `${VOCADB_BASE}/songs?${new URLSearchParams(
+    Object.entries(params).map(([key, value]) => [key, String(value)]),
+  ).toString()}`;
+  const data = await fetchVocaDbResource<{ items: VocaDBSong[] }>("songs", params, directUrl);
   return (data.items || []).map(songToEntry);
 }
 
 async function searchProducers(query: string, opts: SearchOpts = {}): Promise<Entry[]> {
   const { start = 0, maxEntries = 10 } = opts;
-  const data = await fetchJSON<{ items: VocaDBArtist[] }>(
-    `${VOCADB_BASE}/artists?query=${encodeURIComponent(query)}&start=${start}&maxEntries=${maxEntries}&fields=MainPicture&artistTypes=Producer`
-  );
+  const params = {
+    query,
+    start,
+    maxEntries,
+    fields: "MainPicture",
+    artistTypes: "Producer",
+  };
+  const directUrl = `${VOCADB_BASE}/artists?${new URLSearchParams(
+    Object.entries(params).map(([key, value]) => [key, String(value)]),
+  ).toString()}`;
+  const data = await fetchVocaDbResource<{ items: VocaDBArtist[] }>("artists", params, directUrl);
   return (data.items || []).map(artistToEntry).filter((e) => e.type === "producer");
 }
 
 async function searchSingers(query: string, opts: SearchOpts = {}): Promise<Entry[]> {
   const { start = 0, maxEntries = 10 } = opts;
-  const data = await fetchJSON<{ items: VocaDBArtist[] }>(
-    `${VOCADB_BASE}/artists?query=${encodeURIComponent(query)}&start=${start}&maxEntries=${maxEntries}&fields=MainPicture&artistTypes=Vocaloid,CeVIO,SynthesizerV,UTAU,NEUTRINO,VOICEVOX`
-  );
+  const params = {
+    query,
+    start,
+    maxEntries,
+    fields: "MainPicture",
+    artistTypes: "Vocaloid,CeVIO,SynthesizerV,UTAU,NEUTRINO,VOICEVOX",
+  };
+  const directUrl = `${VOCADB_BASE}/artists?${new URLSearchParams(
+    Object.entries(params).map(([key, value]) => [key, String(value)]),
+  ).toString()}`;
+  const data = await fetchVocaDbResource<{ items: VocaDBArtist[] }>("artists", params, directUrl);
   return (data.items || []).map(artistToEntry);
 }
 
 async function searchAlbums(query: string, opts: SearchOpts = {}): Promise<Entry[]> {
   const { start = 0, maxEntries = 10 } = opts;
-  const data = await fetchJSON<{ items: VocaDBAlbum[] }>(
-    `${VOCADB_BASE}/albums?query=${encodeURIComponent(query)}&start=${start}&maxEntries=${maxEntries}&fields=MainPicture`
-  );
+  const params = {
+    query,
+    start,
+    maxEntries,
+    fields: "MainPicture",
+  };
+  const directUrl = `${VOCADB_BASE}/albums?${new URLSearchParams(
+    Object.entries(params).map(([key, value]) => [key, String(value)]),
+  ).toString()}`;
+  const data = await fetchVocaDbResource<{ items: VocaDBAlbum[] }>("albums", params, directUrl);
   return (data.items || []).map(albumToEntry);
 }
 
 // Search songs by artist name: find artist first, then their songs
 export async function searchSongsByArtistName(query: string): Promise<Entry[]> {
   // Step 1: Find matching artists
-  const artistData = await fetchJSON<{ items: VocaDBArtist[] }>(
-    `${VOCADB_BASE}/artists?query=${encodeURIComponent(query)}&maxEntries=5&nameMatchMode=Partial`
-  );
+  const artistParams = {
+    query,
+    maxEntries: 5,
+    nameMatchMode: "Partial",
+  };
+  const artistDirectUrl = `${VOCADB_BASE}/artists?${new URLSearchParams(
+    Object.entries(artistParams).map(([key, value]) => [key, String(value)]),
+  ).toString()}`;
+  const artistData = await fetchVocaDbResource<{ items: VocaDBArtist[] }>("artists", artistParams, artistDirectUrl);
   const artists = artistData.items || [];
   if (artists.length === 0) return [];
 
@@ -505,9 +570,17 @@ export async function searchSongsByArtistName(query: string): Promise<Entry[]> {
 
   for (const artist of artists.slice(0, 3)) {
     try {
-      const songData = await fetchJSON<{ items: VocaDBSong[] }>(
-        `${VOCADB_BASE}/songs?artistId%5B%5D=${artist.id}&maxEntries=10&fields=MainPicture,PVs,Tags&sort=RatingScore&lang=Default`
-      );
+      const songParams = {
+        "artistId[]": artist.id,
+        maxEntries: 10,
+        fields: "MainPicture,PVs,Tags",
+        sort: "RatingScore",
+        lang: "Default",
+      };
+      const songDirectUrl = `${VOCADB_BASE}/songs?${new URLSearchParams(
+        Object.entries(songParams).map(([key, value]) => [key, String(value)]),
+      ).toString()}`;
+      const songData = await fetchVocaDbResource<{ items: VocaDBSong[] }>("songs", songParams, songDirectUrl);
       for (const song of songData.items || []) {
         const entry = songToEntry(song);
         if (!seenIds.has(entry.id)) {

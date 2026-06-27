@@ -116,20 +116,20 @@ function saveCache(cache: Record<string, CacheEntry>) {
   } catch { /* quota exceeded, ignore */ }
 }
 
-function cacheKey(query: string, type: string, start: number): string {
-  return `${type}:${query.toLowerCase().trim()}:${start}`;
+function cacheKey(query: string, type: string, start: number, maxEntries: number): string {
+  return `${type}:${query.toLowerCase().trim()}:${start}:${maxEntries}`;
 }
 
-function getCached(query: string, type: string, start: number): Entry[] | null {
+function getCached(query: string, type: string, start: number, maxEntries: number): Entry[] | null {
   const cache = loadCache();
-  const entry = cache[cacheKey(query, type, start)];
+  const entry = cache[cacheKey(query, type, start, maxEntries)];
   if (entry && Date.now() - entry.ts < CACHE_TTL) return entry.results;
   return null;
 }
 
-function setCached(query: string, type: string, start: number, results: Entry[]) {
+function setCached(query: string, type: string, start: number, maxEntries: number, results: Entry[]) {
   const cache = loadCache();
-  cache[cacheKey(query, type, start)] = { ts: Date.now(), results };
+  cache[cacheKey(query, type, start, maxEntries)] = { ts: Date.now(), results };
   saveCache(cache);
 }
 
@@ -140,9 +140,10 @@ export async function searchOnline(
 ): Promise<Entry[]> {
   if (!query.trim()) return [];
   const start = opts?.start ?? 0;
+  const maxEntries = opts?.maxEntries ?? 10;
 
   // Check cache first
-  const cached = getCached(query, type, start);
+  const cached = getCached(query, type, start, maxEntries);
   if (cached) return cached;
 
   try {
@@ -177,7 +178,7 @@ export async function searchOnline(
     }
 
     // Cache successful results
-    if (results.length > 0) setCached(query, type, start, results);
+    if (results.length > 0) setCached(query, type, start, maxEntries, results);
     return results;
   } catch (err) {
     console.warn("VocaDB search failed:", err);
