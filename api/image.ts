@@ -1,5 +1,3 @@
-import { Buffer } from "node:buffer";
-
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = 9000;
 
@@ -77,15 +75,15 @@ export default async function handler(req: any, res: any) {
       return;
     }
 
-    const buffer = Buffer.from(await upstream.arrayBuffer());
-    if (buffer.byteLength > MAX_IMAGE_BYTES) {
+    const bytes = new Uint8Array(await upstream.arrayBuffer());
+    if (bytes.byteLength > MAX_IMAGE_BYTES) {
       res.status(413).json({ error: "Image too large" });
       return;
     }
 
     res.setHeader("Content-Type", contentType);
     res.setHeader("Cache-Control", "public, max-age=86400, s-maxage=604800, stale-while-revalidate=604800");
-    res.status(200).send(buffer);
+    res.status(200).send(bytes);
   } catch (error) {
     const message = error instanceof Error && error.name === "AbortError"
       ? "Upstream request timed out"
